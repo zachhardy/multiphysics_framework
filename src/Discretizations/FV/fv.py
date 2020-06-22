@@ -16,9 +16,9 @@ class FV(Discretization):
     # General information
     self.n_nodes = self.mesh.n_el
     self.nodes_per_cell = 1
-    # Finite volume cell view
-    self.cell_view = CellFVView1D(self)
-    self.neighbor_view = CellFVView1D(self)
+    # Finite volume cell views
+    for cell in mesh.cells:
+      self.cell_views.append(CellFVView1D(self, cell))
     # Grid
     self.grid = self.CreateGrid()
 

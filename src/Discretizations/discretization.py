@@ -14,15 +14,13 @@ class Discretization:
 
     # derived class attributes
     self.n_nodes = 0
-    self.cell_view = None
-    self.neighbor_view = None
+    self.cell_views = []
     self.grid = None
 
   def CreateGrid(self):
     """ Create the grid coordinates of the unknowns. """
     grid = []
-    for cell in self.mesh.cells:
-      self.cell_view.reinit(cell)
-      grid.extend(self.cell_view.nodes)
+    for view in self.cell_views:
+      grid.extend(view.nodes)
     grid = np.atleast_2d(grid)
     return np.unique(grid, axis=0)

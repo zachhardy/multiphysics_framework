@@ -26,9 +26,9 @@ class CFE(Discretization):
     # Lagrange elements
     self._phi, self._grad_phi = LagrangeElements(porder)
     # Continuous finite element cell views
-    self.cell_view = CellCFEView1D(self)
-    self.neighbor_view = CellCFEView1D(self)
-    # Grid
+    for cell in mesh.cells:
+      self.cell_views.append(CellCFEView1D(self, cell))
+    # Grids
     self.grid = self.CreateGrid() 
     
 
