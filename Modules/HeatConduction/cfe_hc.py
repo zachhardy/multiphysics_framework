@@ -28,13 +28,11 @@ class CFE_HeatConduction(HeatConduction):
 
   def AssemblePhysics(self):
     """ Assemble the spatial physics operator. """
-    shape = (self.n_dofs, self.n_dofs)
-    view = self.sd.cell_view
     # iterate over cells
     Arows, Acols, Avals = [], [], []
     for cell in self.mesh.cells:
       # cell informations
-      view.reinit(cell)
+      view = self.sd.cell_views[cell.id]
       material = self.materials[cell.imat]
 
       # material properties
@@ -63,6 +61,7 @@ class CFE_HeatConduction(HeatConduction):
           Arows += [row]
           Acols += [col]
       Avals += list(self.cell_matrix.ravel())
+    shape = (self.n_dofs, self.n_dofs) # shorthand
     self.A = csr_matrix((Avals, (Arows, Acols)), shape)
 
   def AssembleSource(self, time=0):
@@ -74,11 +73,10 @@ class CFE_HeatConduction(HeatConduction):
       The simulation time (default is 0).
     """
     self.b *= 0
-    view = self.sd.cell_view
     # iterate over cells
     for cell in self.mesh.cells:
       # cell information
-      view.reinit(cell)
+      view = self.sd.cell_views[cell.id]
       material = self.materials[cell.imat]
 
       if hasattr(material, 'q'):
@@ -102,9 +100,10 @@ class CFE_HeatConduction(HeatConduction):
     matrix : csr_matrix (n_dofs, n_dofs)
     vector : numpy.ndarray (n_dofs,)
     """
-    view = self.sd.cell_view
     # iterate over bndry cells and faces
     for cell in self.mesh.bndry_cells:
+      view = self.sd.cell_views[cell.id]
+
       for f, face in enumerate(cell.faces):        
         if face.flag == cell.flag:
           bc = self.bcs[face.flag-1]

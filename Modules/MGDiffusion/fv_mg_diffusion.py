@@ -6,7 +6,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
 sys.path.append('../../src')
-from mg_diffusion import MultiGroupDiffusion
+from .mg_diffusion import MultiGroupDiffusion
 from Discretizations.FV.fv import FV
 from field import Field
 
@@ -23,14 +23,11 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
       
   def AssemblePhysics(self):
     """ Assemble the spatial/energy physics operator. """
-    view = self.sd.cell_view
-    nbr_view = self.sd.neighbor_view
-    shape = (self.n_dofs, self.n_dofs)
     # iterate over cells
     Arows, Acols, Avals = [], [], []
     for cell in self.mesh.cells:
       # cell information
-      view.reinit(cell)
+      view = self.sd.cell_views[cell.id]
       width = cell.width[0]
       volume = cell.volume
       material = self.materials[cell.imat]
@@ -72,9 +69,10 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
         # interior diffusion
         if face.flag == 0:
           # neighbor cell information
-          nbr_view.reinit(face.neighbor_cell)
-          nbr_width = nbr_view.cell.width[0]
-          nbr_material = self.materials[nbr_view.cell.imat]
+          nbr_cell = face.neighbor_cell
+          nbr_view = self.sd.cell_views[nbr_cell.id]
+          nbr_width = nbr_cell.width[0]
+          nbr_material = self.materials[nbr_cell.imat]
           
           # iterate through groups
           for ig in range(self.G):
@@ -91,18 +89,16 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
             Arows += [row, row]
             Acols += [row, col]
             Avals += [val, -val]
-    print(len(Avals), len(Arows), len(Acols))
+    shape = (self.n_dofs, self.n_dofs) # shorthand
     self.A = csr_matrix((Avals, (Arows, Acols)), shape)
 
   def AssembleMass(self):
     """ Assemble the time derivative term. """
-    view = self.sd.cell_view
-    shape = (self.n_dofs, self.n_dofs)
     # iterate over cells
     Mrows, Mcols, Mvals = [], [], []
     for cell in self.mesh.cells:
       # cell information
-      view.reinit(cell)
+      view = self.sd.cell_views[cell.id]
       volume = cell.volume
       material = self.materials[cell.imat]
 
@@ -115,6 +111,7 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
         Mrows += [row]
         Mcols += [row]
         Mvals += [volume / velocity]
+    shape = (self.n_dofs, self.n_dofs) # shorthand
     return csr_matrix((Mvals, (Mrows, Mcols)), shape)
 
   def AssembleSource(self, time=0):
@@ -126,11 +123,10 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
       The simulation time (default is 0).
     """
     self.b *= 0 # clear vector
-    view = self.sd.cell_view
     # iterate over cells
     for cell in self.mesh.cells:
       # cell information
-      view.reinit(cell)
+      view = self.sd.cell_views[cell.id]
       volume = cell.volume
       material = self.materials[cell.imat]
 
@@ -154,10 +150,10 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
     matrix : csr_matrix (n_dofs, n_dofs)
     vector : numpy.ndarray (n_dofs,)
     """
-    view = self.sd.cell_view
     # iterate through bndry cells
     for cell in self.mesh.bndry_cells:
-      # get necessary cell info
+      # cell info
+      view = self.sd.cell_views[cell.id]
       material = self.materials[cell.imat]
       width = cell.width
 
