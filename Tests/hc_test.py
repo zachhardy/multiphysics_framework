@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.extend(['../src', '../Modules/HeatConduction'])
+sys.path.extend(['../src', '../Modules'])
 from problem import Problem
 from Mesh.mesh import Mesh1D
 from field import Field
@@ -12,8 +12,7 @@ from material import HeatConductionMaterial
 from material import NeutronicsMaterial
 from bc import BC
 from Solvers.operator_splitting import OperatorSplitting
-
-from cfe_hc import CFE_HeatConduction
+from HeatConduction.cfe_hc import CFE_HeatConduction
 
 def k(T):
     return 1.5 + (2510 / (215 + T))
@@ -23,7 +22,7 @@ def k(T):
 r_b = 0.45 # domain width
 n_cells = 100 # number of cells
 # create mesh
-mesh = Mesh1D([0., r_b], [n_cells], [0], geom='slab')
+mesh = Mesh1D([0., r_b], [n_cells], [0], geom='cylinder')
 
 ### Materials
 # properties

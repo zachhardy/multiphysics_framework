@@ -9,8 +9,8 @@ class CellCFEView1D:
   ----------
   disctetization : CFE object.
   """
-  def __init__(self, discretization):
-    # General information
+  def __init__(self, discretization, cell):
+    # general information
     self.porder = discretization.porder
     self.geom = discretization.geom
     self.qrule = discretization.qrule
@@ -18,37 +18,6 @@ class CellCFEView1D:
     self.n_nodes = discretization.n_nodes
     self.nodes_per_cell = self.porder + 1
 
-    # Cell storage
-    self.cell = None
-
-    # Node information
-    self.node_ids = None
-    self.nodes = None
-
-    # Jacobian information
-    self.J = None
-    self.Jinv = None
-    self.Jdet = None
-    self.JxW = None
-
-    # Global coordinates
-    self.qpoint_glob = np.zeros(self.n_qpts)
-    self.Jcoord = np.zeros(self.n_qpts)
-
-    # Shape function information
-    self._phi = discretization._phi
-    self._grad_phi = discretization._grad_phi
-    self.phi = np.zeros((self.n_qpts, self.porder+1))
-    self.grad_phi = np.zeros((self.n_qpts, self.porder+1))
-
-    # Precompute phi values
-    self.GetPhiValues()
-
-  def reinit(self, cell):
-    """ Reinit the cell view for cell. """
-    # store the cell
-    self.cell = cell
-    
     # node information
     self.node_ids = np.arange(
       cell.id*self.porder,
@@ -58,7 +27,7 @@ class CellCFEView1D:
       cell.vertices[0],
       cell.vertices[1],
       self.porder+1)
-    
+
     # jacobian information
     self.J = cell.width/self.qrule.Lq
     self.Jinv = 1/self.J
@@ -66,11 +35,14 @@ class CellCFEView1D:
     self.JxW = self.Jdet * self.qrule.wq
 
     # global coordinates
-    self.GetGlobalQPoints()
-    self.GetCoordSysJacobian()
+    self.qpoint_glob = self.GetGlobalQPoints()
+    self.Jcoord = self.GetCoordSysJacobian()
 
-    # compute grad shape function values
-    self.GetGradPhiValues()
+    # shape function information
+    self._phi = discretization._phi
+    self._grad_phi = discretization._grad_phi
+    self.phi = self.GetPhiValues()
+    self.grad_phi = self.GetGradPhiValues()
 
   def CellDoFMap(self, local_id, component=0):
     """ Map a local cell dof to a global dof.
@@ -103,7 +75,7 @@ class CellCFEView1D:
     -------
     int, The mapped dof.
     """
-    assert face_id < len(self.cell.faces), "Invalid face_id."
+    assert face_id < 2, "Invalid face_id."
     if face_id == 0:
       return self.node_ids[0] + component*self.n_nodes
     elif face_id == 1:
@@ -203,7 +175,6 @@ class CellCFEView1D:
     Parameters
     ----------
     u : numpy.ndarray
-      A solution vector
 
     Returns
     -------
@@ -238,30 +209,35 @@ class CellCFEView1D:
 
   def GetGlobalQPoints(self):
     """ Get the quadrature points in global coordinates. """
-    self.qpoint_glob = self.J * (self.qrule.xq + 1) + self.nodes[0]
+    return self.J * (self.qrule.xq + 1) + self.nodes[0]
 
   def GetCoordSysJacobian(self):
     """ Get the coordinate system jacobians. """
     x = self.qpoint_glob # shorthand
+    Jcoord = np.zeros(self.n_qpts)
     for qp in range(self.n_qpts):
       if self.geom == 'slab':
-        self.Jcoord[qp] = 1.
+        Jcoord[qp] = 1.
       elif self.geom == 'cylinder':
-        self.Jcoord[qp] = 2 * np.pi * x[qp]
+        Jcoord[qp] = 2 * np.pi * x[qp]
       elif self.geom == 'sphere':
-        self.Jcoord[qp] = 4 * np.pi * x[qp]**2
+        Jcoord[qp] = 4 * np.pi * x[qp]**2
+    return Jcoord
 
   def GetPhiValues(self):
     """ Compute phi at the quadrature points. """
     x = self.qrule.xq # shorthand
+    phi = np.zeros((self.n_qpts, self.porder+1))
     for qp in range(self.n_qpts):
       for i in range(len(self._phi)):
-        self.phi[qp][i] = self._phi[i](x[qp])
+        phi[qp][i] = self._phi[i](x[qp])
+    return phi
   
   def GetGradPhiValues(self):
     """ Compute grad_phi at the quadrature points. """
     x = self.qrule.xq # shorthand
-    self.grad_phi *= 0 # clear grad phi values
+    grad_phi = np.zeros((self.n_qpts, self.porder+1))
     for qp in range(self.n_qpts):
       for i in range(len(self._grad_phi)):
-        self.grad_phi[qp][i] = self._grad_phi[i](x[qp])*self.Jinv
+        grad_phi[qp][i] = self._grad_phi[i](x[qp])*self.Jinv
+    return grad_phi

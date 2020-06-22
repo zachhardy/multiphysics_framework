@@ -53,7 +53,7 @@ class MultiGroupDiffusion(PhysicsBase):
   def SolveTimeStep(self, time, dt):
     """ Solve a time step of a transient problem. """
     # Recompute physics matrix, if coupled
-    if self.is_coupled or self.A.nnz == 0:
+    if self.is_coupled or self.A is None:
       self.AssemblePhysics()
 
     # Shorthand
