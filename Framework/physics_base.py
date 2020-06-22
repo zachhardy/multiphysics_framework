@@ -61,6 +61,12 @@ class PhysicsBase:
     start = self.field.dof_start
     end = self.field.dof_end
     return self.problem.u_old[start:end]
+
+  def SolveSteadyState(self):
+    raise NotImplementedError(
+      "This method must be implemented in "
+      "derived classes."
+    )
     
     
   def SolveTimeStep(self):
@@ -69,12 +75,7 @@ class PhysicsBase:
       "derived classes."
     )
 
-  def SolveSteadyState(self):
-    raise NotImplementedError(
-      "This method must be implemented in "
-      "derived classes."
-    )
-
+  
   def SolvePhysics(self):
     raise NotImplementedError(
       "This method must be implemented in "
