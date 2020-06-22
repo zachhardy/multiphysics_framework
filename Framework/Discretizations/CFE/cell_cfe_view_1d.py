@@ -17,6 +17,8 @@ class CellCFEView1D:
     self.n_qpts = self.qrule.n_qpts
     self.n_nodes = discretization.n_nodes
     self.nodes_per_cell = self.porder + 1
+    self.volume = cell.volume
+    self.width = cell.width
 
     # node information
     self.node_ids = np.arange(
@@ -178,13 +180,33 @@ class CellCFEView1D:
 
     Returns
     -------
-    numpy.ndarray (n_qpts, -1)
+    numpy.ndarray (n_qpts,)
     """
     n_qpts = self.n_qpts # shorthand
     u_qp = np.zeros(n_qpts)
     for qp in range(n_qpts):
       u_qp[qp] = np.dot(u[self.node_ids], self.phi[qp])
     return u_qp
+
+  def SolutionAverage(self, u):
+    """ Get the average solution on this cell.
+
+    Parameters
+    ----------
+    u : numpy.ndarray
+
+    Returns
+    -------
+    float
+    """
+    n_qpts = self.n_qpts # shorthand
+    u_avg = 0
+    for qp in range(n_qpts):
+      u_avg += (
+        self.Jcoord[qp] * self.JxW[qp]
+        * np.dot(u[self.node_ids], self.phi[qp])
+      )
+    return u_avg / self.volume
 
   def FormatCoef(self, coef):
     """ Format a coefficient for quadrature integration.

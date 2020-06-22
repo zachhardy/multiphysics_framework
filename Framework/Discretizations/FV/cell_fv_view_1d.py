@@ -24,3 +24,7 @@ class CellFVView1D:
   def CellDoFMap(self, component=0):
     """ Map the local cell dof to a global dof. """
     return self.node_ids[0] + component*self.n_nodes
+
+  def SolutionAverage(self, u):
+    """ Return the solution on this cell. """
+    return u[self.node_ids]
