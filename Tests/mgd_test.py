@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.extend(['../src', '../Modules/MGDiffusion'])
+sys.path.extend(['../src', '../Modules'])
 from problem import Problem
 from Mesh.mesh import Mesh1D
 from field import Field
@@ -12,8 +12,8 @@ from material import NeutronicsMaterial
 from bc import BC
 from Solvers.operator_splitting import OperatorSplitting
 
-from fv_mg_diffusion import FV_MultiGroupDiffusion
-from cfe_mg_diffusion import CFE_MultiGroupDiffusion
+from MGDiffusion.fv_mg_diffusion import FV_MultiGroupDiffusion
+from MGDiffusion.cfe_mg_diffusion import CFE_MultiGroupDiffusion
 
 
 ### Mesh
