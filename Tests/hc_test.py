@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.extend(['../src', '../Modules'])
+sys.path.extend(['../Framework', '../Modules'])
 from problem import Problem
 from Mesh.mesh import Mesh1D
 from field import Field
