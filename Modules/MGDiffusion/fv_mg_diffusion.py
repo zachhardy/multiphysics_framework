@@ -5,7 +5,6 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
-sys.path.append('../../src')
 from .mg_diffusion import MultiGroupDiffusion
 from Discretizations.FV.fv import FV
 from field import Field
@@ -21,100 +20,95 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
     # initialize physics
     super().__init__(problem, field, bcs, ics)
       
-  def AssemblePhysics(self):
+  def AssembleCellPhysics(self, cell):
     """ Assemble the spatial/energy physics operator. """
-    # iterate over cells
-    Arows, Acols, Avals = [], [], []
-    for cell in self.mesh.cells:
-      # cell information
-      view = self.sd.cell_views[cell.id]
-      width = cell.width[0]
-      volume = cell.volume
-      material = self.materials[cell.imat]
+    rows, cols, vals = [], [], []
+    # discretization view
+    view = self.sd.cell_views[cell.id]
+    # cell info
+    width = cell.width[0]
+    volume = cell.volume
+    material = self.materials[cell.imat]
 
-      # iterate over energy groups
-      for ig in range(self.G):
-        row = view.CellDoFMap(ig)
-        # removal term
-        sig_r = material.sig_r[ig]
-        # add to matrix
-        Arows += [row]
-        Acols += [row]
-        Avals += [sig_r * volume]
+    # assemble group-wise
+    for ig in range(self.G):
+      row = view.CellDoFMap(ig)
 
-        # iterate over energy groups for coupling
-        for jg in range(self.G):
-          col = view.CellDoFMap(jg)
-          # scattering term
-          if hasattr(material, 'sig_s'):
-            sig_s = material.sig_s[ig][jg]
-            # add to matrix
-            if sig_s != 0:
-              Arows += [row]
-              Acols += [col]
-              Avals += [-sig_s * volume]
+      # removal
+      sig_r = material.sig_r[ig]
+      rows += [row]
+      cols += [row]
+      vals += [sig_r * volume]
 
-          # fission term
-          if hasattr(material, 'nu_sig_f'):
-            chi = material.chi[ig]
-            nu_sig_f = material.nu_sig_f[jg]
-            # add to matrix
-            if chi*nu_sig_f != 0:
-              Arows += [row]
-              Acols += [col]
-              Avals += [-chi * nu_sig_f * volume]
+      # assemble coupling terms
+      for jg in range(self.G):
+        col = view.CellDoFMap(jg)
 
-      # iterate over faces for face terms
-      for face in cell.faces:
-        # interior diffusion
-        if face.flag == 0:
-          # neighbor cell information
-          nbr_cell = face.neighbor_cell
-          nbr_view = self.sd.cell_views[nbr_cell.id]
-          nbr_width = nbr_cell.width[0]
-          nbr_material = self.materials[nbr_cell.imat]
-          
-          # iterate through groups
-          for ig in range(self.G):
-            row = view.CellDoFMap(ig)
-            col = nbr_view.CellDoFMap(ig)
-            # diffusion coefs
-            D = material.D[ig]
-            nbr_D = nbr_material.D[ig]
-            # harmonic averaged quantities
-            width_avg = 0.5*(width + nbr_width)
-            D_avg = 2*width_avg/(width/D + nbr_width/nbr_D)
-            val = face.area * D_avg/width_avg
-            # add to matrix
-            Arows += [row, row]
-            Acols += [row, col]
-            Avals += [val, -val]
-    shape = (self.n_dofs, self.n_dofs) # shorthand
-    self.A = csr_matrix((Avals, (Arows, Acols)), shape)
+        # scattering
+        if hasattr(material, 'sig_s'):
+          sig_s = material.sig_s[ig][jg]
+          if sig_s != 0:
+            rows += [row]
+            cols += [col]
+            vals += [-sig_s * volume]
 
-  def AssembleMass(self):
+        # fission
+        if hasattr(material, 'nu_sig_f'):
+          chi = material.chi[ig]
+          nu_sig_f = material.nu_sig_f[jg]
+          if chi*nu_sig_f != 0:
+            rows += [row]
+            cols += [col]
+            vals += [-chi * nu_sig_f * volume]
+
+    # assemble interior diffusion
+    for face in cell.faces:
+      if face.flag == 0:
+        # neighbor cell and discretization
+        nbr_cell = face.neighbor_cell
+        nbr_view = self.sd.cell_views[nbr_cell.id]
+        # neighbor cell info
+        nbr_width = nbr_cell.width[0]
+        nbr_material = self.materials[nbr_cell.imat]
+        
+        # assemble group-wise
+        for ig in range(self.G):
+          row = view.CellDoFMap(ig)
+          col = nbr_view.CellDoFMap(ig)
+          # diffusion coefs
+          D = material.D[ig]
+          nbr_D = nbr_material.D[ig]
+          # harmonic averaged quantities
+          width_avg = 0.5*(width + nbr_width)
+          D_avg = 2*width_avg/(width/D + nbr_width/nbr_D)
+          # compute the contributions
+          val = face.area * D_avg/width_avg
+          rows += [row, row]
+          cols += [row, col]
+          vals += [val, -val]
+    return rows, cols, vals
+
+  def AssembleCellMass(self, cell):
     """ Assemble the time derivative term. """
-    # iterate over cells
-    Mrows, Mcols, Mvals = [], [], []
-    for cell in self.mesh.cells:
-      # cell information
-      view = self.sd.cell_views[cell.id]
-      volume = cell.volume
-      material = self.materials[cell.imat]
+    rows, cols, vals = [], [], []
+    # discretization view
+    view = self.sd.cell_views[cell.id]
+    # cell info
+    volume = cell.volume
+    material = self.materials[cell.imat]
 
-      # iterate through groups
-      for ig in range(self.G):
-        row = view.CellDoFMap(ig)
-        # group velocity
-        velocity = material.v[ig]
-        # add to matrix
-        Mrows += [row]
-        Mcols += [row]
-        Mvals += [volume / velocity]
-    shape = (self.n_dofs, self.n_dofs) # shorthand
-    return csr_matrix((Mvals, (Mrows, Mcols)), shape)
+    # assemble group-wise
+    for ig in range(self.G):
+      row = view.CellDoFMap(ig)
 
-  def AssembleSource(self, time=0):
+      # inverse velocity scaling
+      v = material.v[ig]
+      rows += [row]
+      cols += [row]
+      vals += [volume / v]
+    return rows, cols, vals
+
+  def AssembleCellSource(self, cell, time=0):
     """ Assemble the source vector.
 
     Parameters
@@ -122,28 +116,29 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
     time : float, optional
       The simulation time (default is 0).
     """
-    self.b *= 0 # clear vector
-    # iterate over cells
-    for cell in self.mesh.cells:
-      # cell information
-      view = self.sd.cell_views[cell.id]
-      volume = cell.volume
-      material = self.materials[cell.imat]
+    rows, vals = [], []
+    # discretization view
+    view = self.sd.cell_views[cell.id]
+    # cell info
+    volume = cell.volume
+    material = self.materials[cell.imat]
 
-      # iterate over groups
-      for ig in range(self.G):
-        row = view.CellDoFMap(ig)
+    # assemble group-wise
+    for ig in range(self.G):
+      row = view.CellDoFMap(ig)
 
-        # source term
-        if hasattr(material, 'q'):
-          q = material.q[ig]
-          if callable(q):
-            q = q(time)
-          if q != 0:
-            self.b[row] += q * volume
-
-  def ApplyBCs(self, matrix, vector):
-    """ Apply BCs to matrix and vector.
+      # source
+      if hasattr(material, 'q'):
+        q = material.q[ig]
+        if callable(q):
+          q = q(time)
+        if q != 0:
+          rows += [row]
+          vals += [q * volume]
+    return rows, vals
+    
+  def ApplyBCs(self, matrix=None, vector=None):
+    """ Apply BCs to matrix or vector.
 
     Parameters
     ----------
@@ -164,28 +159,50 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
           bc = self.bcs[face.flag-1]
 
           # iterate over energy groups
-          for ig in range(self.G):
-            row = view.CellDoFMap(ig)
-
-            # reflective bc
-            if bc.boundary_kind == 'reflective':
-              pass
-
-            # if a marshak-like bc
-            elif bc.boundary_kind in ['source', 'zero_flux',
-                                      'marshak, vacuum']:
-              # get the diffusion coef
-              D = material.D[ig]
-
-              # compute the current term coef
-              if bc.boundary_kind in ['source', 'zero_flux']:
-                coef = 2*D/width
-              elif bc.boundary_kind in ['marshak', 'vacuum']:
-                coef = 2*D/(4*D+width)
+          if bc.boundary_kind != 'reflective':
+            for ig in range(self.G):
+              row = view.CellDoFMap(ig)
               
-              # all of these bcs change matrix
-              matrix[row,row] += face.area * coef
+              # if a marshak-like bc
+              if bc.boundary_kind in ['source', 'zero_flux',
+                                        'marshak, vacuum']:
+                # get the diffusion coef
+                D = material.D[ig]
+                # compute the current term coef
+                if bc.boundary_kind in ['source', 'zero_flux']:
+                  coef = 2*D/width
+                elif bc.boundary_kind in ['marshak', 'vacuum']:
+                  coef = 2*D/(4*D+width)
+                
+                # all of these bcs change matrix
+                if matrix is not None:
+                  matrix[row,row] += face.area * coef
 
-              # only source and marshak change vector
-              if bc.boundary_kind in ['source', 'marshak']:
-                vector[row] += bc.vals[ig]
+                # add source contributions
+                if vector is not None:
+                  if bc.boundary_kind in ['source', 'marshak']:
+                    vector[row] += face.area * coef * bc.vals[ig]
+  
+  def ValidateBCs(self, bcs):
+    bc_kinds = [
+      'reflective', 
+      'marshak', 
+      'vacuum',
+      'source',
+      'zero_flux'
+    ]
+
+    try:
+      for bc in bcs:
+        if bc.boundary_kind not in bc_kinds:
+          msg = "Approved BCs are:\n"
+          for kind in bc_kinds:
+            msg += "{}\n".format(kind)
+          raise ValueError(msg)
+      bcs = super().ValidateBCs(bcs)
+      return bcs
+      
+
+    except ValueError as err:
+      print(err.args[0])
+      sys.exit(-1)
