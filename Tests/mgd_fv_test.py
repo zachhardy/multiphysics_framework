@@ -11,9 +11,7 @@ from field import Field
 from material import NeutronicsMaterial
 from bc import BC
 from Solvers.operator_splitting import OperatorSplitting
-
 from MGDiffusion.fv_mg_diffusion import FV_MultiGroupDiffusion
-from MGDiffusion.cfe_mg_diffusion import CFE_MultiGroupDiffusion
 
 
 ### Mesh
@@ -43,21 +41,18 @@ materials = [NeutronicsMaterial(**xs)]
 problem = Problem(mesh, materials)
 
 ### Physics
-# bc_L = BC('reflective', 0, [0., 0., 0.])
-# bc_R = BC('zero_flux', 1, [0., 0., 0.])
-bc_L = BC('neumann', 0, [0., 0., 0.])
-bc_R = BC('dirichlet', 1, [0., 0., 0.])
+bc_L = BC('reflective', 0, [0., 0., 0.])
+bc_R = BC('zero_flux', 1, [0., 0., 0.])
 bcs = [bc_L, bc_R]
 ics = [lambda r: (r_b**2 - r**2) / r_b**2,
        lambda r: (r_b**2 - r**2) / r_b**2,
        lambda r: 0]
-mgd = CFE_MultiGroupDiffusion(problem, G, bcs, ics)
+mgd = FV_MultiGroupDiffusion(problem, G, bcs, ics)
 
 ### Solver
 solver = OperatorSplitting(problem)
 
 problem.RunTransient(verbosity=1, method='tbdf2')
-# problem.RunSteadyState(verbosity=1, maxit=2)
 
 for g in range(G):
   beg = g * mgd.n_nodes
