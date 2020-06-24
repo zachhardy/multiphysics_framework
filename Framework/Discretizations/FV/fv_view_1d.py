@@ -2,7 +2,7 @@
 
 import numpy as np
 
-class CellFVView1D:
+class FVView1D:
   """ Finite volume cell view. 
   
   Parameters
@@ -22,9 +22,9 @@ class CellFVView1D:
     )
 
   def CellDoFMap(self, component=0):
-    """ Map the local cell dof to a global dof. """
+    """ Map a local cell dof to a global. """
     return self.node_ids[0] + component*self.n_nodes
 
   def SolutionAverage(self, u):
-    """ Return the solution on this cell. """
+    """ Average of the solution on the cell. """
     return u[self.node_ids]

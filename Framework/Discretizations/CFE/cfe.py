@@ -2,7 +2,7 @@
 
 import numpy as np
 from ..discretization import Discretization
-from .cell_cfe_view_1d import CellCFEView1D
+from .cfe_view_1d import CFEView1D
 from quadrature import Quadrature
 
 class CFE(Discretization):
@@ -10,7 +10,7 @@ class CFE(Discretization):
 
   Parameters
   ----------
-  mesh : MeshBase object.
+  mesh : MeshBase-like
   porder : int, optional
     The element order (default is 1).
   n_qpts : int, optional
@@ -18,19 +18,20 @@ class CFE(Discretization):
   """
   def __init__(self, mesh, porder=1, n_qpts=2):
     super().__init__(mesh)
-    # General information
     self.n_nodes = porder*mesh.n_el + 1
     self.nodes_per_cell = porder + 1
     self.porder = 1
     self.qrule = Quadrature(n_qpts)
-    # Lagrange elements
-    self._phi, self._grad_phi = LagrangeElements(porder)
-    # Continuous finite element cell views
+
+    tmp = LagrangeElements(porder)
+    self._shape = tmp[0]
+    self._grad_shape = tmp[1]
+
     fe_views = []
     for cell in mesh.cells:
-      fe_views.append(CellCFEView1D(self, cell))
+      fe_views.append(CFEView1D(self, cell))
     self.fe_views = fe_views
-    # Grids
+
     self.grid = self.CreateGrid() 
 
   def CreateGrid(self):

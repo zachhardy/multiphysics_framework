@@ -3,16 +3,16 @@
 import numpy as np
 
 class Discretization:
-  """ Base class to describe a spatial discretization. """
+  """ Template class for discretizations.
+  
+  Parameters
+  ----------
+  mesh : MeshBase-like
+  """
   def __init__(self, mesh):
-    # store mesh reference
     self.mesh = mesh
-    
-    # general info
     self.dim = mesh.dim
     self.geom = mesh.geom
-
-    # derived class attributes
     self.n_nodes = 0
     self.grid = None
 
