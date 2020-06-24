@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 sys.path.extend(['../Framework', '../Modules'])
 from problem import Problem
-from Mesh.mesh import Mesh1D
+from Mesh.mesh_1d import Mesh1D
 from field import Field
 from material import NeutronicsMaterial
 from bc import BC
