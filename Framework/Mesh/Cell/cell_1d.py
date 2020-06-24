@@ -5,10 +5,16 @@ from .cell_base import CellBase
 from ..Face.face_1d import Face1D
 
 class Cell1D(CellBase):
-  """ One-dimensional cell. """
+  """ One-dimensional cell. 
+  
+  Parameters
+  ----------
+  mesh : MeshBase-like
+  iel : int
+    The cell index
+  """
   def __init__(self, mesh, iel):
-    super().__init__(mesh)
-    self.id = iel
+    super().__init__(mesh, iel)
     self.vertices_per_cell = 2
     self.faces_per_cell = 2
     self.imat = mesh.iel2mat[iel]

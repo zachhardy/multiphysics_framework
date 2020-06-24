@@ -3,7 +3,14 @@
 from .face_base import FaceBase
 
 class Face1D(FaceBase):
-  """ One-dimensional face. """
+  """ One-dimensional face. 
+  
+  Parameters
+  ----------
+  cell : CellBase-like
+  iface : int
+    The face index.
+  """
   def __init__(self, cell, iface):
     super().__init__(cell, iface)
     self.id = cell.id + iface

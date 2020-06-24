@@ -8,12 +8,15 @@ class CellBase:
 
   Parameters
   ----------
-  mesh : MeshBase object.
+  mesh : MeshBase-like
+  iel : int
+    The cell index
   """
-  def __init__(self, mesh):
+  def __init__(self, mesh, iel):
     self.mesh = mesh
     self.dim = mesh.dim
     self.geom = mesh.geom
+    self.id = iel
     self.vertices_per_cell = 0
     self.faces_per_cell = 0
     self.imat = []

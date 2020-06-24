@@ -7,10 +7,11 @@ class FaceBase:
 
   Parameters
   ----------
-  mesh : Derived class of MeshBase
+  cell : CellBase-like
+  iface : int
+    The face index.
   """
   def __init__(self, cell, iface):
-    # General info
     self.mesh = cell.mesh
     self.cell = cell
     self.dim = cell.mesh.dim
