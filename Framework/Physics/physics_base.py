@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import numpy as np
+import numpy.linalg as npla
 from field import Field
 from Discretizations.FV.fv import FV
 from Discretizations.CFE.cfe import CFE
@@ -18,9 +20,13 @@ class PhysicsBase:
     # reference to field
     self.field = field
 
+    # reference to materials
+    self.materials = self.InitializeMaterials()
+
     # reference to discretization
     self.sd = field.sd
     # discretization info
+    self.grid = field.grid
     self.n_nodes = field.n_nodes
     self.n_dofs = field.n_dofs
 
@@ -38,60 +44,54 @@ class PhysicsBase:
     self.bcs = self.ValidateBCs(bcs)
     self.ics = self.ValidateICs(ics)
 
+    # booleans
+    self.is_coupled = False
+    self.is_nonlinear = True
+
   @property
   def u(self):
-    """ The current solution of field.
-
-    This routine grabs the solution of the field
-    associated with this physics from the global 
-    solution vector.
-    """
-    start = self.field.dof_start
-    end = self.field.dof_end
-    return self.problem.u[start:end]
+    """ Get the solution vector for this physics. """
+    dofs = self.field.dofs
+    return self.problem.u[dofs[0]:dofs[-1]+1]
 
   @property
   def u_old(self):
-    """ The old solution of field.
+    """ Get the old solution vector for this physics. """
+    dofs = self.field.dofs
+    return self.problem.u_old[dofs[0]:dofs[-1]+1]
 
-    This routine grabs the solution of the field
-    associated with this physics from the global 
-    solution vector.
-    """
-    start = self.field.dof_start
-    end = self.field.dof_end
-    return self.problem.u_old[start:end]
+  @property
+  def f_old(self):
+    """ Get the old physics action. """
+    return self.OldPhysicsAction()
+
+  def OldPhysicsAction(self):
+    raise NotImplementedError(
+      "This method must be implemented in derived classes."
+    )
 
   def SolveSteadyState(self):
     raise NotImplementedError(
-      "This method must be implemented in "
-      "derived classes."
+      "This method must be implemented in derived classes."
     )
-    
     
   def SolveTimeStep(self):
     raise NotImplementedError(
-      "This method must be implemented in "
-      "derived classes."
+      "This method must be implemented in derived classes."
     )
-
-  
-  def SolvePhysics(self):
+  def InitializeMaterials(self):
     raise NotImplementedError(
-      "This method must be implemented in "
-      "derived classes."
+      "This method must be implemented in derived classes."
     )
 
   def ValidateBCs(self, bcs):
     raise NotImplementedError(
-      "This method must be implemented in "
-      "derived classes."
+      "This method must be implemented in derived classes."
     )
 
   def ValidateICs(self, ics):
     raise NotImplementedError(
-      "This method must be implemented in "
-      "derived classes."
+      "This method must be implemented in derived classes."
     )
 
   

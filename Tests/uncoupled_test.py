@@ -12,7 +12,6 @@ from material import HeatConductionMaterial
 from material import NeutronicsMaterial
 from bc import BC
 from Solvers.operator_splitting import OperatorSplitting
-
 from HeatConduction.cfe_hc import CFE_HeatConduction
 from MGDiffusion.cfe_mg_diffusion import CFE_MultiGroupDiffusion
 
@@ -35,7 +34,7 @@ problem = Problem(mesh, materials)
 
 ### Physics
 # neutronics
-phi_bcs = [BC('neumann', 0, [0.]), BC('robin', 1, [[0.5],[2.]])]
+phi_bcs = [BC('neumann', 0, [0]), BC('robin', 1, [[0.5],[2.]])]
 mgd = CFE_MultiGroupDiffusion(problem, 1, phi_bcs)
 # conduction
 T_bcs = [BC('neumann', 0, 0), BC('dirichlet', 1, 300.)]
