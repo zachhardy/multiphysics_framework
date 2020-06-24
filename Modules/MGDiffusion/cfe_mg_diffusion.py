@@ -33,7 +33,7 @@ class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
     """ Assemble the spatial/energy physics operator. """
     rows, cols, vals = [], [], []
     # discretization view and material
-    view = self.sd.cell_views[cell.id]
+    fe_view = self.sd.fe_views[cell.id]
     material = self.materials[cell.imat]
 
     # assemble group-wise
@@ -45,12 +45,12 @@ class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
       # assemble cell matrix
       self.cell_matrix *= 0
       for i in range(self.nodes_per_cell):
-        row = view.CellDoFMap(i, ig)
+        row = fe_view.CellDoFMap(i, ig)
         for j in range(self.nodes_per_cell):
-          col = view.CellDoFMap(j, ig)
+          col = fe_view.CellDoFMap(j, ig)
           self.cell_matrix[i,j] += (
-            view.Integrate_PhiI_PhiJ(i, j, sig_r)
-            + view.Integrate_GradPhiI_GradPhiJ(i, j, D)
+            fe_view.Integrate_PhiI_PhiJ(i, j, sig_r)
+            + fe_view.Integrate_GradPhiI_GradPhiJ(i, j, D)
           )
           rows += [row]
           cols += [col]
@@ -66,11 +66,11 @@ class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
           if sig_s != 0:
             self.cell_matrix *= 0
             for i in range(self.nodes_per_cell):
-              row = view.CellDoFMap(i, ig)
+              row = fe_view.CellDoFMap(i, ig)
               for j in range(self.nodes_per_cell):
-                col = view.CellDoFMap(j, jg)
+                col = fe_view.CellDoFMap(j, jg)
                 self.cell_matrix[i,j] -= \
-                  view.Integrate_PhiI_PhiJ(i, j, sig_s)
+                  fe_view.Integrate_PhiI_PhiJ(i, j, sig_s)
                 rows += [row]
                 cols += [col]
             vals += list(self.cell_matrix.ravel())
@@ -84,11 +84,11 @@ class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
           if chi*nu_sig_f != 0:
             self.cell_matrix *= 0
             for i in range(self.nodes_per_cell):
-              row = view.CellDoFMap(i, ig)
+              row = fe_view.CellDoFMap(i, ig)
               for j in range(self.nodes_per_cell):
-                col = view.CellDoFMap(j, jg)
+                col = fe_view.CellDoFMap(j, jg)
                 self.cell_matrix[i,j] -= \
-                  view.Integrate_PhiI_PhiJ(i, j, chi*nu_sig_f)
+                  fe_view.Integrate_PhiI_PhiJ(i, j, chi*nu_sig_f)
                 rows += [row]
                 cols += [col]
             vals += list(self.cell_matrix.ravel())
@@ -98,7 +98,7 @@ class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
     """ Assemble the time derivative term. """
     rows, cols, vals = [], [], []
     # discretization view
-    view = self.sd.cell_views[cell.id]
+    fe_view = self.sd.fe_views[cell.id]
     # cell info
     material = self.materials[cell.imat]
 
@@ -110,11 +110,11 @@ class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
       # assemble cell matrix
       self.cell_matrix *= 0
       for i in range(self.nodes_per_cell):
-        row = view.CellDoFMap(i, ig)
+        row = fe_view.CellDoFMap(i, ig)
         for j in range(self.nodes_per_cell):
-          col = view.CellDoFMap(j, ig)
+          col = fe_view.CellDoFMap(j, ig)
           self.cell_matrix[i,j] += \
-            view.Integrate_PhiI_PhiJ(i, j, 1/v)
+            fe_view.Integrate_PhiI_PhiJ(i, j, 1/v)
           rows += [row]
           cols += [col]
       vals += list(self.cell_matrix.ravel())
@@ -130,7 +130,7 @@ class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
     """
     rows, vals = [], []
     # discretization view
-    view = self.sd.cell_views[cell.id]
+    fe_view = self.sd.fe_views[cell.id]
     # cell info
     material = self.materials[cell.imat]
 
@@ -146,8 +146,8 @@ class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
         if q != 0:
           self.cell_vector *= 0
           for i in range(self.nodes_per_cell):
-            row = view.CellDoFMap(i, ig)
-            self.cell_vector[i] = view.Integrate_PhiI(i, q)
+            row = fe_view.CellDoFMap(i, ig)
+            self.cell_vector[i] = fe_view.Integrate_PhiI(i, q)
             rows += [row]
           vals += list(self.cell_vector.ravel())
     return rows, vals
@@ -162,7 +162,7 @@ class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
     """
     # iterate over bndry cells and faces
     for cell in self.mesh.bndry_cells:
-      view = self.sd.cell_views[cell.id]
+      fe_view = self.sd.fe_views[cell.id]
       
       for f, face in enumerate(cell.faces):        
         if face.flag > 0:
@@ -170,7 +170,7 @@ class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
   
           # iterate over energy groups
           for ig in range(self.G):
-            row = view.FaceDoFMap(f, ig)
+            row = fe_view.FaceDoFMap(f, ig)
 
             # neumann bc
             if bc.boundary_kind == 'neumann':
