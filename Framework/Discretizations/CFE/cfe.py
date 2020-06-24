@@ -26,10 +26,20 @@ class CFE(Discretization):
     # Lagrange elements
     self._phi, self._grad_phi = LagrangeElements(porder)
     # Continuous finite element cell views
+    fe_views = []
     for cell in mesh.cells:
-      self.cell_views.append(CellCFEView1D(self, cell))
+      fe_views.append(CellCFEView1D(self, cell))
+    self.fe_views = fe_views
     # Grids
     self.grid = self.CreateGrid() 
+
+  def CreateGrid(self):
+    """ Generate the grid of unknowns. """
+    grid = []
+    for fe_view in self.fe_views:
+      grid.extend(fe_view.nodes)
+    grid = np.atleast_2d(grid)
+    return np.unique(grid, axis=0)
     
 
 # ====== End class definition

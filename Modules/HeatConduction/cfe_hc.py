@@ -31,7 +31,7 @@ class CFE_HeatConduction(HeatConduction):
     # iterate over cells
     rows, cols, vals = [], [], []
     # discretization view
-    view = self.sd.cell_views[cell.id]
+    fe_view = self.sd.fe_views[cell.id]
     # cell info
     material = self.materials[cell.imat]
 
@@ -39,7 +39,7 @@ class CFE_HeatConduction(HeatConduction):
     k = material.k
     if callable(k):
       if not self.is_coupled:
-        T = view.SolutionAtQuadrature(self.u)
+        T = fe_view.SolutionAtQuadrature(self.u)
         k = k(T)
       else:
         raise NotImplementedError(
@@ -49,11 +49,11 @@ class CFE_HeatConduction(HeatConduction):
     # construct cell matrix
     self.cell_matrix *= 0
     for i in range(self.nodes_per_cell):
-      row = view.CellDoFMap(i)
+      row = fe_view.CellDoFMap(i)
       for j in range(self.nodes_per_cell):
-        col = view.CellDoFMap(j)
+        col = fe_view.CellDoFMap(j)
         self.cell_matrix[i,j] += (
-          view.Integrate_GradPhiI_GradPhiJ(i, j, k)
+          fe_view.Integrate_GradPhiI_GradPhiJ(i, j, k)
         )
         rows += [row]
         cols += [col]
@@ -70,7 +70,7 @@ class CFE_HeatConduction(HeatConduction):
     """
     rows, vals = [], []  
     # discretization view
-    view = self.sd.cell_views[cell.id]
+    fe_view = self.sd.fe_views[cell.id]
     # cell info
     material = self.materials[cell.imat]
 
@@ -84,12 +84,11 @@ class CFE_HeatConduction(HeatConduction):
       if q != 0:
         self.cell_vector *= 0
         for i in range(self.nodes_per_cell):
-          row = view.CellDoFMap(i)
-          self.cell_vector[i] = view.Integrate_PhiI(i, q)
+          row = fe_view.CellDoFMap(i)
+          self.cell_vector[i] = fe_view.Integrate_PhiI(i, q)
           rows += [row]
         vals += list(self.cell_vector.ravel())
     return rows, vals
-
 
   def ApplyBCs(self, matrix=None, vector=None):
     """ Apply BCs to matrix and vector.
@@ -101,12 +100,12 @@ class CFE_HeatConduction(HeatConduction):
     """
     # iterate over bndry cells and faces
     for cell in self.mesh.bndry_cells:
-      view = self.sd.cell_views[cell.id]
+      fe_view = self.sd.fe_views[cell.id]
 
       for f, face in enumerate(cell.faces):        
         if face.flag == cell.flag:
           bc = self.bcs[face.flag-1]
-          row = view.FaceDoFMap(f)
+          row = fe_view.FaceDoFMap(f)
 
           # neumann bc
           if bc.boundary_kind == 'neumann':

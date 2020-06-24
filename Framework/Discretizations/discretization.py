@@ -14,13 +14,10 @@ class Discretization:
 
     # derived class attributes
     self.n_nodes = 0
-    self.cell_views = []
     self.grid = None
 
   def CreateGrid(self):
-    """ Create the grid coordinates of the unknowns. """
-    grid = []
-    for view in self.cell_views:
-      grid.extend(view.nodes)
-    grid = np.atleast_2d(grid)
-    return np.unique(grid, axis=0)
+    raise NotImplementedError(
+      "This method must be implemented in derived classes."
+    )
+    

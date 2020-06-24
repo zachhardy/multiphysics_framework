@@ -24,7 +24,7 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
     """ Assemble the spatial/energy physics operator. """
     rows, cols, vals = [], [], []
     # discretization view
-    view = self.sd.cell_views[cell.id]
+    fv_view = self.sd.fv_views[cell.id]
     # cell info
     width = cell.width[0]
     volume = cell.volume
@@ -32,7 +32,7 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
 
     # assemble group-wise
     for ig in range(self.G):
-      row = view.CellDoFMap(ig)
+      row = fv_view.CellDoFMap(ig)
 
       # removal
       sig_r = material.sig_r[ig]
@@ -42,7 +42,7 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
 
       # assemble coupling terms
       for jg in range(self.G):
-        col = view.CellDoFMap(jg)
+        col = fv_view.CellDoFMap(jg)
 
         # scattering
         if hasattr(material, 'sig_s'):
@@ -66,15 +66,15 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
       if face.flag == 0:
         # neighbor cell and discretization
         nbr_cell = face.neighbor_cell
-        nbr_view = self.sd.cell_views[nbr_cell.id]
+        nbr_fv_view = self.sd.fv_views[nbr_cell.id]
         # neighbor cell info
         nbr_width = nbr_cell.width[0]
         nbr_material = self.materials[nbr_cell.imat]
         
         # assemble group-wise
         for ig in range(self.G):
-          row = view.CellDoFMap(ig)
-          col = nbr_view.CellDoFMap(ig)
+          row = fv_view.CellDoFMap(ig)
+          col = nbr_fv_view.CellDoFMap(ig)
           # diffusion coefs
           D = material.D[ig]
           nbr_D = nbr_material.D[ig]
@@ -92,14 +92,14 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
     """ Assemble the time derivative term. """
     rows, cols, vals = [], [], []
     # discretization view
-    view = self.sd.cell_views[cell.id]
+    fv_view = self.sd.fv_views[cell.id]
     # cell info
     volume = cell.volume
     material = self.materials[cell.imat]
 
     # assemble group-wise
     for ig in range(self.G):
-      row = view.CellDoFMap(ig)
+      row = fv_view.CellDoFMap(ig)
 
       # inverse velocity scaling
       v = material.v[ig]
@@ -118,14 +118,14 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
     """
     rows, vals = [], []
     # discretization view
-    view = self.sd.cell_views[cell.id]
+    fv_view = self.sd.fv_views[cell.id]
     # cell info
     volume = cell.volume
     material = self.materials[cell.imat]
 
     # assemble group-wise
     for ig in range(self.G):
-      row = view.CellDoFMap(ig)
+      row = fv_view.CellDoFMap(ig)
 
       # source
       if hasattr(material, 'q'):
@@ -148,7 +148,7 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
     # iterate through bndry cells
     for cell in self.mesh.bndry_cells:
       # cell info
-      view = self.sd.cell_views[cell.id]
+      fv_view = self.sd.fv_views[cell.id]
       material = self.materials[cell.imat]
       width = cell.width
 
@@ -161,7 +161,7 @@ class FV_MultiGroupDiffusion(MultiGroupDiffusion):
           # iterate over energy groups
           if bc.boundary_kind != 'reflective':
             for ig in range(self.G):
-              row = view.CellDoFMap(ig)
+              row = fv_view.CellDoFMap(ig)
               
               # if a marshak-like bc
               if bc.boundary_kind in ['source', 'zero_flux',
