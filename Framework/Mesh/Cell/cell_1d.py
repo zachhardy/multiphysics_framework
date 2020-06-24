@@ -1,60 +1,31 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from Mesh.face import Face1D
-
-class CellBase:
-  """ Base class for a cell.
-
-  Parameters
-  ----------
-  mesh : MeshBase object.
-  """
-  def __init__(self, mesh):
-    # General info
-    self._mesh = mesh
-    self.dim = mesh.dim
-    self.geom = mesh.geom
-    self.vertices_per_cell = None
-    self.faces_per_cell = None
-    self.imat = []
-    self.flag = 0
-    self.neighbors = []
-    # Vertex info
-    self.vertex_ids = []
-    self.vertices = []
-    # Geometric info
-    self.width = []
-    self.volume = 0.
-    self.face_areas = []
-
-    # Faces
-    self.faces = []
-
+from .cell_base import CellBase
+from ..Face.face_1d import Face1D
 
 class Cell1D(CellBase):
   """ One-dimensional cell. """
   def __init__(self, mesh, iel):
     super().__init__(mesh)
-    # General info
     self.id = iel
     self.vertices_per_cell = 2
     self.faces_per_cell = 2
     self.imat = mesh.iel2mat[iel]
     self.flag = max(mesh.iel2flags[iel])
     self.neighbors = mesh.iel2neighbors[iel]
-    # Vertex info
+    # vertex info
     self.vertex_ids = mesh.iel2vids[iel]
     self.vertices = mesh.iel2vcoords[iel]
-    # Geometric info
+    # geometric info
     self.width = self.vertices[1] - self.vertices[0]
-    self.volume = self.GetVolume()
+    self.volume = self.GetCellVolume()
     self.face_areas = self.GetFaceAreas()
-    # Face objects
+    # face objects
     self.faces = [Face1D(self, 0), 
                   Face1D(self, 1)]
     
-  def GetVolume(self):
+  def GetCellVolume(self):
     """ Compute the volume of the cell. """
     if self.geom == 'slab':
       return self.width
