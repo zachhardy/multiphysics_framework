@@ -20,9 +20,9 @@ def k(T):
 ### Mesh
 # parameters
 r_b = 0.45 # domain width
-n_cells = 100 # number of cells
+n_cells = 10 # number of cells
 # create mesh
-mesh = Mesh1D([0., r_b], [n_cells], [0], geom='cylinder')
+mesh = Mesh1D([0., r_b], [n_cells], [0], geom='slab')
 
 ### Materials
 # properties
