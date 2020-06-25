@@ -28,4 +28,4 @@ class Quadrature:
         self.Lq = 2.0 # quadrature interval length
 
         # Generate gauss legendre quadrature
-        [self.xq, self.wq] = np.polynomial.legendre.leggauss(self.n_qpts)
+        [self.qpoints, self.weights] = np.polynomial.legendre.leggauss(self.n_qpts)
