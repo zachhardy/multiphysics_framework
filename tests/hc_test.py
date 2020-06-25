@@ -4,15 +4,15 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.extend(['../Framework', '../Modules'])
+sys.path.extend(['../framework', '../modules'])
 from problem import Problem
-from Mesh.mesh import Mesh1D
+from mesh.mesh import Mesh1D
 from field import Field
 from material import HeatConductionMaterial
 from material import NeutronicsMaterial
 from bc import BC
-from Solvers.operator_splitting import OperatorSplitting
-from HeatConduction.cfe_hc import CFE_HeatConduction
+from solvers.operator_splitting import OperatorSplitting
+from heat_conduction.cfe_hc import CFE_HeatConduction
 
 def k(T):
     return 1.5 + (2510 / (215 + T))
