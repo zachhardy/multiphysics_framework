@@ -13,18 +13,17 @@ class FV(Discretization):
   """
   def __init__(self, mesh):
     super().__init__(mesh)
-    # General information
     self.n_nodes = self.mesh.n_el
     self.nodes_per_cell = 1
-    # Finite volume cell views
+
     fv_views = []
     for cell in mesh.cells:
       fv_views.append(CellFVView1D(self, cell))
     self.fv_views = fv_views
-    # Grid
-    self.grid = self.CreateGrid()
 
-  def CreateGrid(self):
+    self.grid = self.create_grid()
+
+  def create_grid(self):
     """ Generate the grid of unknowns. """
     grid = []
     for fv_view in self.fv_views:
