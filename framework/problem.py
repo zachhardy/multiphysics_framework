@@ -61,7 +61,7 @@ class Problem:
         self.maxit = maxit
         # Initialize a solver and solve.
         self.solver = OperatorSplitting(self)
-        self.solver.SolveSystem()
+        self.solver.solve_system()
 
     def run_transient(
             self, solver_type='os', t0=0, tend=0.1, 
