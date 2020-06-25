@@ -2,9 +2,6 @@
 
 import numpy as np
 import numpy.linalg as npla
-from field import Field
-from Discretizations.FV.fv import FV
-from Discretizations.CFE.cfe import CFE
 
 class PhysicsBase:
   """ Template class for physics modules. """

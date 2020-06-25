@@ -103,7 +103,7 @@ class CFE_HeatConduction(HeatConduction):
       fe_view = self.sd.fe_views[cell.id]
 
       for f, face in enumerate(cell.faces):        
-        if face.flag == cell.flag:
+        if face.flag > 0:
           bc = self.bcs[face.flag-1]
           row = fe_view.FaceDoFMap(f)
 

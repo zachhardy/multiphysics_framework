@@ -4,16 +4,16 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.extend(['../Framework', '../Modules'])
+sys.path.extend(['../framework', '../modules'])
 from problem import Problem
-from Mesh.mesh_1d import Mesh1D
+from mesh.mesh import Mesh1D
 from field import Field
 from material import NeutronicsMaterial
 from bc import BC
-from Solvers.operator_splitting import OperatorSplitting
+from solvers.operator_splitting import OperatorSplitting
 
-from MGDiffusion.fv_mg_diffusion import FV_MultiGroupDiffusion
-from MGDiffusion.cfe_mg_diffusion import CFE_MultiGroupDiffusion
+from mg_diffusion.fv_mg_diffusion import FV_MultiGroupDiffusion
+from mg_diffusion.cfe_mg_diffusion import CFE_MultiGroupDiffusion
 
 
 ### Mesh

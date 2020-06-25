@@ -6,7 +6,7 @@ from time import perf_counter
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
-from Physics.physics_system import PhysicsSystem
+from physics.physics_system import PhysicsSystem
 from material import NeutronicsMaterial as NeutMat
 
 class MultiGroupDiffusion(PhysicsSystem):

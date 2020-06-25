@@ -2,7 +2,7 @@
 
 import numpy as np
 from ..discretization import Discretization
-from .cell_fv_view_1d import CellFVView1D
+from .fv_view import CellFVView1D
 
 class FV(Discretization):
   """ Class doe Finite Volume discretizations. 

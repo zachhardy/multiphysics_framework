@@ -2,7 +2,7 @@
 
 import numpy as np
 from ..discretization import Discretization
-from .cell_cfe_view_1d import CellCFEView1D
+from .cfe_view import CellCFEView1D
 from quadrature import Quadrature
 
 class CFE(Discretization):

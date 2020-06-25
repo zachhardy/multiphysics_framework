@@ -2,8 +2,6 @@
 
 import sys
 import numpy as np
-from Discretizations.FV.fv import FV
-from Discretizations.CFE.cfe import CFE
 
 class Field:
   """ Field function object.

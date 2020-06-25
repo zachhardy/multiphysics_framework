@@ -8,7 +8,7 @@ from scipy.sparse.linalg import spsolve
 
 sys.path.append('../../src')
 from .mg_diffusion import MultiGroupDiffusion
-from Discretizations.CFE.cfe import CFE
+from discretizations.cfe.cfe import CFE
 from field import Field
 
 class CFE_MultiGroupDiffusion(MultiGroupDiffusion):

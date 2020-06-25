@@ -6,7 +6,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
 from .mg_diffusion import MultiGroupDiffusion
-from Discretizations.FV.fv import FV
+from discretizations.fv.fv import FV
 from field import Field
 
 class FV_MultiGroupDiffusion(MultiGroupDiffusion):
