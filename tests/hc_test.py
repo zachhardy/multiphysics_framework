@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,10 +5,9 @@ import matplotlib.pyplot as plt
 sys.path.extend(['../framework', '../modules'])
 from problem import Problem
 from mesh.mesh import Mesh1D
-from field import Field
-from material import HeatConductionMaterial
 from bc import BC
 from heat_conduction.cfe_hc import CFE_HeatConduction
+from heat_conduction.hc_material import HeatConductionMaterial
 
 def k(T):
     return 1.5 + (2510 / (215 + T))
@@ -18,7 +15,7 @@ def k(T):
 ### Mesh
 # parameters
 r_b = 0.45 # domain width
-n_cells = 10 # number of cells
+n_cells = 100 # number of cells
 # create mesh
 mesh = Mesh1D([0., r_b], [n_cells], [0], geom='slab')
 

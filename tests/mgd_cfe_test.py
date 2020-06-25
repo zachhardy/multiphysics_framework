@@ -7,12 +7,11 @@ import matplotlib.pyplot as plt
 sys.path.extend(['../framework', '../modules'])
 from problem import Problem
 from mesh.mesh import Mesh1D
-from field import Field
-from material import NeutronicsMaterial
 from bc import BC
+from mg_diffusion.neutronics_material \
+     import NeutronicsMaterial
 from mg_diffusion.cfe_mg_diffusion \
     import CFE_MultiGroupDiffusion
-
 
 ### Mesh
 # parameters
