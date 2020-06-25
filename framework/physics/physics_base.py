@@ -64,5 +64,11 @@ class PhysicsBase:
     def solve_system(self):
         raise NotImplementedError
         
-    def _register_materials(self):
-        raise NotImplementedError
+    def _parse_materials(self, material_type):
+        """ Get neutronics properties and sort by zone. """
+        materials = []
+        for material in self.problem.materials:
+            if material.material_type == material_type:
+                materials += [material]
+        materials.sort(key=lambda x: x.material_id)
+        return materials

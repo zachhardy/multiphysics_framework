@@ -8,18 +8,23 @@ from solvers.operator_splitting import OperatorSplitting
 class Problem:
     """ Class for managing a problem.
 
-    This class is meant to solve general problems
-    in an agnostic way. What this means is that it 
-    depends on each physics module having similarly
-    named routines to perform higher level tasks such
-    as solving a time step, solving a steady state system,
-    etc.
-
+    A general problem handler. This serves as an interface
+    for solving single- or multi-physics problems. The 
+    problem is initialized with a mesh and materials list.
+    The user should create physics on the input file level.
+    Each time a physics is created, it is added to the physics
+    list and its field to the fields list. At run time, a 
+    solver is instantiated to perform the Picard (Newton later)
+    iterations. This hinges on a all physics having the common
+    function call solve_system, which should handle both
+    steady state and transient systems.
+    
     Parameters
     ----------
-    mesh : mesh-like
-    fields : list of Fields
+    mesh : mesh-like object
+        The mesh for this problem.         
     materials : list of material-like objects
+        All materials for this problem.
     """
     def __init__(self, mesh, materials):
         self.mesh = mesh
@@ -154,7 +159,5 @@ class Problem:
     def recompute_old_physics_action(self):
         """ Recompute the old physics action. """
         for physic in self.physics:
-            physic.recompute_old_physics_action()
-
-            
+            physic.recompute_old_physics_action()        
         
