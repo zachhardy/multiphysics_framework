@@ -6,25 +6,25 @@ import numpy as np
 from field import Field
 from discretizations.cfe.cfe import CFE
 from physics.physics_system import PhysicsSystem
-from .mgd_mixin import MGDMixin
+from .neutronics_material import NeutronicsMaterial
 
-bc_kinds = [
-        'neumann',
-        'robin',
-        'dirichlet'
-]
-
-class CFE_MultiGroupDiffusion(PhysicsSystem, MGDMixin):
+class CFE_MultiGroupDiffusion(PhysicsSystem):
     """ Continuous finite element multigroup diffusion module. """
 
     name = 'flux'
+    material_type = NeutronicsMaterial.material_type
+    bc_kinds = [
+        'neumann',
+        'robin',
+        'dirichlet'
+    ]
 
     def __init__(self, problem, G, bcs, ics=None, porder=1):
         super().__init__(problem, bcs, ics)
         # Number of energy groups
         self.G = G 
         # Get relevant materials
-        self.materials = self._parse_materials()
+        self.materials = self._parse_materials(self.material_type)
         # Initialize and register the field with problem.
         cfe = CFE(self.mesh, porder, porder+1)
         self.field = Field(self.name, self.mesh, cfe, G)
@@ -191,9 +191,9 @@ class CFE_MultiGroupDiffusion(PhysicsSystem, MGDMixin):
     def _validate_bcs(self, bcs):
         """ Validate the provided boundary conditions. """
         for bc in bcs:
-            if bc.boundary_kind not in bc_kinds:
+            if bc.boundary_kind not in self.bc_kinds:
                 msg = "Approved BCs are:\n"
-                for kind in bc_kinds:
+                for kind in self.bc_kinds:
                     msg += "{}\n".format(kind)
                 raise ValueError(msg)
         return bcs

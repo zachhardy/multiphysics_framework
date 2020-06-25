@@ -6,7 +6,7 @@ import numpy as np
 from discretizations.cfe.cfe import CFE
 from field import Field
 from physics.physics_system import PhysicsSystem
-from .hc_mixin import HCMixin
+from .hc_material import HeatConductionMaterial
 
 bc_kinds = [
     'neumann',
@@ -14,7 +14,7 @@ bc_kinds = [
     'dirichlet'
 ]
 
-class CFE_HeatConduction(PhysicsSystem, HCMixin):
+class CFE_HeatConduction(PhysicsSystem):
     """ Continuous finite element heat conduction handler. 
     
     Generate a heat conduction subproblem (physics) within 
@@ -34,12 +34,13 @@ class CFE_HeatConduction(PhysicsSystem, HCMixin):
     """
 
     name = 'temperature'
+    material_type = HeatConductionMaterial.material_type
 
     def __init__(self, problem, bcs, ics=None, porder=1):
         super().__init__(problem, bcs, ics)
 
         # Get relevant materials
-        self.materials = self._parse_materials()
+        self.materials = self._parse_materials(self.material_type)
         # Initialize and register the field with problem.
         cfe = CFE(self.mesh, porder, porder+1)
         self.field = Field(self.name, self.mesh, cfe, 1)

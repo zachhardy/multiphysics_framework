@@ -6,33 +6,29 @@ import numpy as np
 from field import Field
 from discretizations.fv.fv import FV
 from physics.physics_system import PhysicsSystem
-from .mgd_mixin import MGDMixin
+from .neutronics_material import NeutronicsMaterial
 
-bc_kinds = [
-    'reflective', 
-    'marshak', 
-    'vacuum',
-    'source',
-    'zero_flux'
-]
 
-no_val_kinds = [
-    'reflective', 
-    'vacuum', 
-    'zero_source'
-]
 
-class FV_MultiGroupDiffusion(PhysicsSystem, MGDMixin):
+class FV_MultiGroupDiffusion(PhysicsSystem):
     """ Finite volume multigroup diffusion handler. """
     
     name = 'flux'
+    material_type = NeutronicsMaterial.material_type
+    bc_kinds = [
+        'reflective', 
+        'marshak', 
+        'vacuum',
+        'source',
+        'zero_flux'
+    ]
 
     def __init__(self, problem, G, bcs, ics=None):
         super().__init__(problem, bcs, ics)
         # Number of energy groups
         self.G = G 
         # Get relevant materials
-        self.materials = self._parse_materials()
+        self.materials = self._parse_materials(self.material_type)
         # Initialize and register the field with problem.
         fv = FV(self.mesh)
         self.field = Field(self.name, self.mesh, fv, G)
@@ -193,16 +189,11 @@ class FV_MultiGroupDiffusion(PhysicsSystem, MGDMixin):
     def _validate_bcs(self, bcs):
         """ Validate the provided boundary conditions. """
         for bc in bcs:
-            if bc.boundary_kind not in bc_kinds:
+            if bc.boundary_kind not in self.bc_kinds:
                 msg = "Approved BCs are:\n"
-                for kind in bc_kinds:
+                for kind in self.bc_kinds:
                     msg += "{}\n".format(kind)
                 raise ValueError(msg)
-
-            if bc.boundary_kind not in no_val_kinds:
-                if bc.vals is None:
-                    msg = "This BC must have a provided value."
-                    raise ValueError(msg)
         return bcs
 
     def _validate_ics(self, ics):
