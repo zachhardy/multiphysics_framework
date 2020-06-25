@@ -5,37 +5,26 @@ import numpy.linalg as npla
 
 class PhysicsBase:
     """ Template class for physics modules. """
-    def __init__(self, problem, field, bcs, ics=None):
+    def __init__(self, problem):
         problem.physics.append(self)
         self.problem = problem
         self.mesh = problem.mesh
-        self.field = field
-        self.materials = self.initialize_materials()
-        self.sd = field.sd
+        self.materials = None
+        self.field = None
+        self.sd = None
 
         # Discritization info
-        self.grid = field.grid
-        self.n_nodes = field.n_nodes
-        self.n_dofs = field.n_dofs
-
-        # Set the beginning of the field dof range.
-        field.dof_start = problem.n_dofs
-        # Add the field to the problem, and update the
-        # appropriate attributes.
-        problem.fields.append(field)
-        problem.n_fields += 1
-        problem.n_dofs += field.n_dofs
-        problem.u.resize(problem.n_dofs)
-        # Set the end of the field dof range.
-        field.dof_end = problem.n_dofs
+        self.grid = []
+        self.n_nodes = 0
+        self.n_dofs = 0
 
         # Validate boundary and initial conditions.
-        self.bcs = self._validate_bcs(bcs)
-        self.ics = self._validate_ics(ics)
+        self.bcs = None
+        self.ics = None
 
         # Booleans for coupling and nonlinearity.
         self.is_coupled = False
-        self.is_nonlinear = True
+        self.is_nonlinear = False
 
     @property
     def u(self):
@@ -49,26 +38,31 @@ class PhysicsBase:
         dofs = self.field.dofs
         return self.problem.u_old[dofs[0]:dofs[-1]+1]
 
-    @property
-    def f_old(self):
-        """ Get the old physics action. """
-        return self.OldPhysicsAction()
+    def _register_field(self):
+        """ Register this field into the problem. """
+        # Add the field to the field stack.
+        self.problem.fields.append(self.field)
+        # Add the discretization to the physics
+        self.sd = self.field.sd
+        self.grid = self.sd.grid
+        self.n_nodes = self.sd.n_nodes
+        self.n_dofs = self.field.n_dofs
+        # Set the beginning of the field dof range.
+        self.field.dof_start = self.problem.n_dofs
+        # Add the field to the problem, and update the
+        # appropriate attributes.
+        self.problem.fields.append(self.field)
+        self.problem.n_fields += 1
+        self.problem.n_dofs += self.field.n_dofs
+        self.problem.u.resize(self.problem.n_dofs)
+        # Set the end of the field dof range.
+        self.field.dof_end = self.problem.n_dofs
 
-    def old_physics_action(self):
+    def recompute_old_physics_action(self):
         raise NotImplementedError
 
     def solve_system(self):
         raise NotImplementedError
         
-    def initialize_materials(self):
+    def _register_materials(self):
         raise NotImplementedError
-
-    def _validate_bcs(self, bcs):
-        raise NotImplementedError
-
-    def _validate_ics(self, ics):
-        raise NotImplementedError
-
-    
-
-        

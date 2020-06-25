@@ -117,6 +117,9 @@ class Problem:
                 msg += "\n"+"="*25
                 print(msg)
 
+            # Compute old physics action
+            self.recompute_old_physics_action()
+
             # Handle single step methods.
             if method != 'tbdf2':
                 self.solver.solve_system(time, dt, method)
@@ -147,6 +150,11 @@ class Problem:
                 grid = field.grid.ravel()
                 self.u[dofs] = physic.ics[c](grid)
         self.u_old = np.copy(self.u)
+
+    def recompute_old_physics_action(self):
+        """ Recompute the old physics action. """
+        for physic in self.physics:
+            physic.recompute_old_physics_action()
 
             
         
