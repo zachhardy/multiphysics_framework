@@ -9,9 +9,7 @@ from problem import Problem
 from mesh.mesh import Mesh1D
 from field import Field
 from material import HeatConductionMaterial
-from material import NeutronicsMaterial
 from bc import BC
-from solvers.operator_splitting import OperatorSplitting
 from heat_conduction.cfe_hc import CFE_HeatConduction
 
 def k(T):
@@ -38,10 +36,7 @@ bc_R = BC('dirichlet', 1, 300.)
 bcs = [bc_L, bc_R]
 hc = CFE_HeatConduction(problem, bcs)
 
-### Solver
-solver = OperatorSplitting(problem)
-
-problem.RunSteadyState(verbosity=2)
+problem.run_steady_state(verbosity=2)
 
 plt.plot(hc.field.grid, hc.u)
 plt.show()
