@@ -13,19 +13,11 @@ class Quadrature:
     """
 
     def __init__(self, n_qpts=2):
-        # ===== Input checks
-        try:
-            if not isinstance(n_qpts, int):
-                raise ValueError("n_qpts must be an int.")
-            if n_qpts < 0:
-                raise ValueError("n_qpts must be positive.")
-        except ValueError as err:
-            msg = "Aborting program due to ValueError:\n\t{}"
-            print(msg.format(err.args[0]))
-            sys.exit(-1)
-            
-        self.n_qpts = n_qpts # number of quadrature points
-        self.Lq = 2.0 # quadrature interval length
+        assert isinstance(n_qpts, int), "n_qpts must be int."
+        assert n_qpts > 0, "n_qpts must be greater than 0."
+        
+        self.n_qpts = n_qpts 
+        self.Lq = 2.0 # interval size
 
         # Generate gauss legendre quadrature
         [self.qpoints, self.weights] = np.polynomial.legendre.leggauss(self.n_qpts)

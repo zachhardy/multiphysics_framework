@@ -41,6 +41,7 @@ class NeutronicsMaterial(MaterialBase):
          D=[], sig_s=[], nu_sig_f=[],
          chi=[], v=[], q=[]):
     super().__init__(material_id)
+    
     # Atom density
     self.Na = Na
 
