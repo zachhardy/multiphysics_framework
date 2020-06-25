@@ -3,7 +3,7 @@
 import numpy as np
 from ..discretization import Discretization
 from .cfe_view import CellCFEView1D
-from quadrature import Quadrature
+from quadrature import GLQuadrature
 
 class CFE(Discretization):
     """ Continuous finite element discretization. """
@@ -12,7 +12,7 @@ class CFE(Discretization):
         self.n_nodes = porder*mesh.n_el + 1
         self.nodes_per_cell = porder + 1
         self.porder = 1
-        self.qrule = Quadrature(n_qpts)
+        self.qrule = GLQuadrature(n_qpts)
         
         # Lagrange elements
         tmp = lagrange_elements(porder)

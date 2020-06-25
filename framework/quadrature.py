@@ -3,13 +3,14 @@
 import sys
 import numpy  as np
 
-class Quadrature:
+class GLQuadrature:
     """
     Gauss-Legendre quadrature.
     
     Parameters
     ----------
-    n_qpts: int; The number of points. Default is 2.
+    n_qpts: int, default=2
+        The number of quadrature points.
     """
 
     def __init__(self, n_qpts=2):
