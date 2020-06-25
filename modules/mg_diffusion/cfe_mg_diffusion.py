@@ -2,194 +2,201 @@
 
 import sys
 import numpy as np
-from time import perf_counter
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import spsolve
 
-sys.path.append('../../src')
-from .mg_diffusion import MultiGroupDiffusion
-from discretizations.cfe.cfe import CFE
 from field import Field
+from discretizations.cfe.cfe import CFE
+from physics.physics_system import PhysicsSystem
+from .mgd_mixin import MGDMixin
 
-class CFE_MultiGroupDiffusion(MultiGroupDiffusion):
-  """ Continuous finite element multigroup diffusion module. """
-  def __init__(self, problem, G, bcs, ics=None, porder=1):
-    # initialize field
-    sd = CFE(problem.mesh, porder, n_qpts=porder+1)
-    field = Field('flux', problem.mesh, sd, G)
-    # group structure
-    self.G = G
-    # useful quantities
-    self.porder = porder
-    self.nodes_per_cell = sd.nodes_per_cell
-    # cell matrix
-    npc = self.nodes_per_cell
-    self.cell_matrix = np.zeros((npc, npc))
-    self.cell_vector = np.zeros(npc)
-    # initialize physics
-    super().__init__(problem, field, bcs, ics)
+bc_kinds = [
+        'neumann',
+        'robin',
+        'dirichlet'
+]
 
-  def AssembleCellPhysics(self, cell):
-    """ Assemble the spatial/energy physics operator. """
-    rows, cols, vals = [], [], []
-    # discretization view and material
-    fe_view = self.sd.fe_views[cell.id]
-    material = self.materials[cell.imat]
+class CFE_MultiGroupDiffusion(PhysicsSystem, MGDMixin):
+    """ Continuous finite element multigroup diffusion module. """
 
-    # assemble group-wise
-    for ig in range(self.G):
-      # removal and diffusion
-      sig_r = material.sig_r[ig]
-      D = material.D[ig] 
+    name = 'flux'
 
-      # assemble cell matrix
-      self.cell_matrix *= 0
-      for i in range(self.nodes_per_cell):
-        row = fe_view.CellDoFMap(i, ig)
-        for j in range(self.nodes_per_cell):
-          col = fe_view.CellDoFMap(j, ig)
-          self.cell_matrix[i,j] += (
-            fe_view.Integrate_PhiI_PhiJ(i, j, sig_r)
-            + fe_view.Integrate_GradPhiI_GradPhiJ(i, j, D)
-          )
-          rows += [row]
-          cols += [col]
-      vals += list(self.cell_matrix.ravel())
+    def __init__(self, problem, G, bcs, ics=None, porder=1):
+        super().__init__(problem, bcs, ics)
+        # Number of energy groups
+        self.G = G 
+        # Get relevant materials
+        self.materials = self._parse_materials()
+        # Initialize and register the field with problem.
+        cfe = CFE(self.mesh, porder, porder+1)
+        self.field = Field(self.name, self.mesh, cfe, G)
+        self._register_field()
+        # Store relevant CFE info.
+        self.porder = porder
+        npc = self.sd.nodes_per_cell
+        self.cell_matrix = np.zeros((npc, npc))
+        self.cell_vector = np.zeros(npc)
 
-      # assemble energy coupled terms
-      for jg in range(self.G):
-        # scattering
-        if hasattr(material, 'sig_s'):
-          sig_s = material.sig_s[ig][jg]
+    def assemble_cell_physics(self, cell):
+        """ Assemble the spatial/energy physics operator. """
+        rows, cols, vals = [], [], []
+        fe_view = self.sd.fe_views[cell.id]
+        material = self.materials[cell.imat]
 
-          # assemble cell matrix
-          if sig_s != 0:
+        for ig in range(self.G):
+            # Assembal removal + diffusion
+            sig_r = material.sig_r[ig]
+            D = material.D[ig]           
             self.cell_matrix *= 0
-            for i in range(self.nodes_per_cell):
-              row = fe_view.CellDoFMap(i, ig)
-              for j in range(self.nodes_per_cell):
-                col = fe_view.CellDoFMap(j, jg)
-                self.cell_matrix[i,j] -= \
-                  fe_view.Integrate_PhiI_PhiJ(i, j, sig_s)
-                rows += [row]
-                cols += [col]
+            for i in range(self.porder+1):
+                row = fe_view.cell_dof_map(i, ig)
+                for j in range(self.porder+1):
+                    col = fe_view.cell_dof_map(j, ig)
+                    self.cell_matrix[i,j] += (
+                        fe_view.intV_shapeI_shapeJ(i, j, sig_r)
+                        + fe_view.intV_gradShapeI_gradShapeJ(i, j, D)
+                    )
+                    rows += [row]
+                    cols += [col]
             vals += list(self.cell_matrix.ravel())
 
-        # fission
-        if hasattr(material, 'nu_sig_f'):
-          chi = material.chi[ig]
-          nu_sig_f = material.nu_sig_f[jg]
+            for jg in range(self.G):
+                # Assemble scattering
+                if hasattr(material, 'sig_s'):
+                    sig_s = material.sig_s[ig][jg]
+                    if sig_s != 0:
+                        self.cell_matrix *= 0
+                        for i in range(self.porder+1):
+                            row = fe_view.cell_dof_map(i, ig)
+                            for j in range(self.porder+1):
+                                col = fe_view.cell_dof_map(j, jg)
+                                self.cell_matrix[i,j] -= (
+                                    fe_view.intV_shapeI_shapeJ(
+                                        i, j, sig_s
+                                    )
+                                )
+                                rows += [row]
+                                cols += [col]
+                        vals += list(self.cell_matrix.ravel())
 
-          # assemble cell matrix
-          if chi*nu_sig_f != 0:
+                # Assemble fission
+                if hasattr(material, 'nu_sig_f'):
+                    chi = material.chi[ig]
+                    nu_sig_f = material.nu_sig_f[jg]
+                    if chi*nu_sig_f != 0:
+                        self.cell_matrix *= 0
+                        for i in range(self.porder+1):
+                            row = fe_view.cell_dof_map(i, ig)
+                            for j in range(self.porder+1):
+                                col = fe_view.cell_dof_map(j, jg)
+                                self.cell_matrix[i,j] -= (
+                                    fe_view.intV_shapeI_shapeJ(
+                                        i, j, chi*nu_sig_f
+                                    )
+                                )
+                                rows += [row]
+                                cols += [col]
+                        vals += list(self.cell_matrix.ravel())
+        return rows, cols, vals
+                                    
+    def assemble_cell_mass(self, cell):
+        """ Assemble the time derivative term. """
+        rows, cols, vals = [], [], []
+        fe_view = self.sd.fe_views[cell.id]
+        material = self.materials[cell.imat]
+
+        # assemble group-wise
+        for ig in range(self.G):
+            v = material.v[ig]
+
+            # Assemble inverse velocity
             self.cell_matrix *= 0
-            for i in range(self.nodes_per_cell):
-              row = fe_view.CellDoFMap(i, ig)
-              for j in range(self.nodes_per_cell):
-                col = fe_view.CellDoFMap(j, jg)
-                self.cell_matrix[i,j] -= \
-                  fe_view.Integrate_PhiI_PhiJ(i, j, chi*nu_sig_f)
-                rows += [row]
-                cols += [col]
+            for i in range(self.porder+1):
+                row = fe_view.cell_dof_map(i, ig)
+                for j in range(self.porder+1):
+                    col = fe_view.cell_dof_map(j, ig)
+                    self.cell_matrix[i,j] += \
+                        fe_view.intV_shapeI_shapeJ(i, j, 1/v)
+                    rows += [row]
+                    cols += [col]
             vals += list(self.cell_matrix.ravel())
-    return rows, cols, vals
-                  
-  def AssembleCellMass(self, cell):
-    """ Assemble the time derivative term. """
-    rows, cols, vals = [], [], []
-    # discretization view
-    fe_view = self.sd.fe_views[cell.id]
-    # cell info
-    material = self.materials[cell.imat]
+        return rows, cols, vals  
 
-    # assemble group-wise
-    for ig in range(self.G):
-      # inverse velocity
-      v = material.v[ig]
+    def assemble_cell_source(self, cell, time=0):
+        """ Assemble the source vector.
 
-      # assemble cell matrix
-      self.cell_matrix *= 0
-      for i in range(self.nodes_per_cell):
-        row = fe_view.CellDoFMap(i, ig)
-        for j in range(self.nodes_per_cell):
-          col = fe_view.CellDoFMap(j, ig)
-          self.cell_matrix[i,j] += \
-            fe_view.Integrate_PhiI_PhiJ(i, j, 1/v)
-          rows += [row]
-          cols += [col]
-      vals += list(self.cell_matrix.ravel())
-    return rows, cols, vals  
+        Parameters
+        ----------
+        time : float, optional
+            The simulation time (default is 0).
+        """
+        rows, vals = [], []
+        fe_view = self.sd.fe_views[cell.id]
+        material = self.materials[cell.imat]
 
-  def AssembleCellSource(self, cell, time=0):
-    """ Assemble the source vector.
+        for ig in range(self.G):
+            # Assemble source
+            if hasattr(material, 'q'):
+                q = material.q[ig]
+                q = q(time) if callable(q) else q
+                if q != 0:
+                    self.cell_vector *= 0
+                    for i in range(self.porder+1):
+                        row = fe_view.cell_dof_map(i, ig)
+                        self.cell_vector[i] = fe_view.intV_shapeI(i, q)
+                        rows += [row]
+                    vals += list(self.cell_vector.ravel())
+        return rows, vals
 
-    Parameters
-    ----------
-    time : float, optional
-      The simulation time (default is 0).
-    """
-    rows, vals = [], []
-    # discretization view
-    fe_view = self.sd.fe_views[cell.id]
-    # cell info
-    material = self.materials[cell.imat]
+    def apply_bcs(self, matrix=None, vector=None):
+        """ Apply BCs to matrix and vector.
 
-    # assemble group-wise
-    for ig in range(self.G):
-      # source
-      if hasattr(material, 'q'):
-        q = material.q[ig]
-        if callable(q):
-          q = q(time)
-        
-        # assemble cell vector
-        if q != 0:
-          self.cell_vector *= 0
-          for i in range(self.nodes_per_cell):
-            row = fe_view.CellDoFMap(i, ig)
-            self.cell_vector[i] = fe_view.Integrate_PhiI(i, q)
-            rows += [row]
-          vals += list(self.cell_vector.ravel())
-    return rows, vals
+        Parameters
+        ----------
+        matrix : csr_matrix (n_dofs, n_dofs)
+        vector : numpy.ndarray (n_dofs,)
+        """
+        # iterate over bndry cells and faces
+        for cell in self.mesh.bndry_cells:
+            fe_view = self.sd.fe_views[cell.id]
+            
+            for f, face in enumerate(cell.faces):        
+                if face.flag > 0:
+                    bc = self.bcs[face.flag-1]
+    
+                    # iterate over energy groups
+                    for ig in range(self.G):
+                        row = fe_view.face_dof_map(f, ig)
 
-  def ApplyBCs(self, matrix=None, vector=None):
-    """ Apply BCs to matrix and vector.
+                        # neumann bc
+                        if bc.boundary_kind == 'neumann':
+                            if vector is not None:
+                                vector[row] += bc.vals[ig]
 
-    Parameters
-    ----------
-    matrix : csr_matrix (n_dofs, n_dofs)
-    vector : numpy.ndarray (n_dofs,)
-    """
-    # iterate over bndry cells and faces
-    for cell in self.mesh.bndry_cells:
-      fe_view = self.sd.fe_views[cell.id]
-      
-      for f, face in enumerate(cell.faces):        
-        if face.flag > 0:
-          bc = self.bcs[face.flag-1]
-  
-          # iterate over energy groups
-          for ig in range(self.G):
-            row = fe_view.FaceDoFMap(f, ig)
+                        # robin bc
+                        elif bc.boundary_kind == 'robin':
+                            if matrix is not None:
+                                matrix[row,row] += 0.5
+                            if vector is not None:
+                                vector[row] += 2.0*bc.vals[ig]
 
-            # neumann bc
-            if bc.boundary_kind == 'neumann':
-              if vector is not None:
-                vector[row] += bc.vals[ig]
+                        # dirichlet bc
+                        elif bc.boundary_kind == 'dirichlet':
+                            if matrix is not None:
+                                matrix[row,row] = 1.0
+                                for col in matrix[row].nonzero()[1]:
+                                    if row != col:
+                                        matrix[row,col] = 0.0
+                            if vector is not None:
+                                vector[row] = bc.vals[ig]
 
-            # robin bc
-            elif bc.boundary_kind == 'robin':
-              if matrix is not None:
-                matrix[row,row] += 0.5
-              if vector is not None:
-                vector[row] += 2.0*bc.vals[ig]
+    def _validate_bcs(self, bcs):
+        """ Validate the provided boundary conditions. """
+        for bc in bcs:
+            if bc.boundary_kind not in bc_kinds:
+                msg = "Approved BCs are:\n"
+                for kind in bc_kinds:
+                    msg += "{}\n".format(kind)
+                raise ValueError(msg)
+        return bcs
 
-            # dirichlet bc
-            elif bc.boundary_kind == 'dirichlet':
-              if matrix is not None:
-                matrix[row,row] = 1.0
-                for col in matrix[row].nonzero()[1]:
-                  if row != col:
-                    matrix[row,col] = 0.0
-              if vector is not None:
-                vector[row] = bc.vals[ig]
+    def _validate_ics(self, ics):
+        return ics

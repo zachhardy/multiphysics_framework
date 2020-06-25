@@ -2,132 +2,190 @@
 
 import sys
 import numpy as np
-from time import perf_counter
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import spsolve
 
-from .hc import HeatConduction
-from Discretizations.CFE.cfe import CFE
+from discretizations.cfe.cfe import CFE
 from field import Field
+from physics.physics_system import PhysicsSystem
+from .hc_mixin import HCMixin
 
-class CFE_HeatConduction(HeatConduction):
-  """ Continuous finite element heat conduction handler. """
-  def __init__(self, problem, bcs, ics=None, porder=1):
-    # initialize field
-    sd = CFE(problem.mesh, porder, n_qpts=porder+1)
-    field = Field('temperature', problem.mesh, sd, 1)
-    # useful quantities
-    self.porder = porder
-    self.nodes_per_cell = sd.nodes_per_cell
-    # cell matrix
-    npc = self.nodes_per_cell
-    self.cell_matrix = np.zeros((npc, npc))
-    self.cell_vector = np.zeros(npc)
-    # initialize the physics module
-    super().__init__(problem, field, bcs, ics)
+bc_kinds = [
+    'neumann',
+    'robin',
+    'dirichlet'
+]
 
-  def AssembleCellPhysics(self, cell):
-    """ Assemble the spatial physics operator. """
-    # iterate over cells
-    rows, cols, vals = [], [], []
-    # discretization view
-    fe_view = self.sd.fe_views[cell.id]
-    # cell info
-    material = self.materials[cell.imat]
-
-    # conductivity
-    k = material.k
-    if callable(k):
-      if not self.is_coupled:
-        T = fe_view.SolutionAtQuadrature(self.u)
-        k = k(T)
-      else:
-        raise NotImplementedError(
-          "Only T dependent conductivities allowed."
-        )
+class CFE_HeatConduction(PhysicsSystem, HCMixin):
+    """ Continuous finite element heat conduction handler. 
     
-    # construct cell matrix
-    self.cell_matrix *= 0
-    for i in range(self.nodes_per_cell):
-      row = fe_view.CellDoFMap(i)
-      for j in range(self.nodes_per_cell):
-        col = fe_view.CellDoFMap(j)
-        self.cell_matrix[i,j] += (
-          fe_view.Integrate_GradPhiI_GradPhiJ(i, j, k)
-        )
-        rows += [row]
-        cols += [col]
-    vals += list(self.cell_matrix.ravel())
-    return rows, cols, vals
-
-  def AssembleCellSource(self, cell, time=0):
-    """ Assemble the source vector.
-
+    Generate a heat conduction subproblem (physics) within 
+    the global problem handler. 
+    
     Parameters
     ----------
-    time : float, optional
-      The simulation time (default is 0).
+    problem : Problem object
+        The global problem handler
+    bcs : list of BC objects
+        The bounday conditions for the heat conduction problem.
+    ics : callable, default=None
+        The initial condition for the heat conduction problem.
+        If steady state, this should be None.
+    porder : int, default=1
+        The polynomial order of the finite elements.
     """
-    rows, vals = [], []  
-    # discretization view
-    fe_view = self.sd.fe_views[cell.id]
-    # cell info
-    material = self.materials[cell.imat]
 
-    # source
-    if hasattr(material, 'q'):
-      q = material.q
-      if callable(q):
-        q = q(time)
-      
-      # construct cell vector
-      if q != 0:
-        self.cell_vector *= 0
-        for i in range(self.nodes_per_cell):
-          row = fe_view.CellDoFMap(i)
-          self.cell_vector[i] = fe_view.Integrate_PhiI(i, q)
-          rows += [row]
-        vals += list(self.cell_vector.ravel())
-    return rows, vals
+    name = 'temperature'
 
-  def ApplyBCs(self, matrix=None, vector=None):
-    """ Apply BCs to matrix and vector.
+    def __init__(self, problem, bcs, ics=None, porder=1):
+        super().__init__(problem, bcs, ics)
 
-    Parameters
-    ----------
-    matrix : csr_matrix (n_dofs, n_dofs)
-    vector : numpy.ndarray (n_dofs,)
-    """
-    # iterate over bndry cells and faces
-    for cell in self.mesh.bndry_cells:
-      fe_view = self.sd.fe_views[cell.id]
+        # Get relevant materials
+        self.materials = self._parse_materials()
+        # Initialize and register the field with problem.
+        cfe = CFE(self.mesh, porder, porder+1)
+        self.field = Field(self.name, self.mesh, cfe, 1)
+        self._register_field()
+        # Store relevant CFE info.
+        self.porder = porder
+        npc = self.sd.nodes_per_cell
+        self.cell_matrix = np.zeros((npc, npc))
+        self.cell_vector = np.zeros(npc)
+        # Determine nonlinearity
+        for material in self.materials:
+            if callable(material.k):
+                self.is_nonlinear = True
 
-      for f, face in enumerate(cell.faces):        
-        if face.flag > 0:
-          bc = self.bcs[face.flag-1]
-          row = fe_view.FaceDoFMap(f)
 
-          # neumann bc
-          if bc.boundary_kind == 'neumann':
-            if vector is not None:
-              vector[row] += bc.vals
+    def assemble_cell_physics(self, cell):
+        """ Assemble the spatial physics operator. 
+        
+        Parameters
+        ----------
+        cell : cell-like
+        """
+        rows, cols, vals = [], [], []
+        fe_view = self.sd.fe_views[cell.id]
+        material = self.materials[cell.imat]
 
-          # robin bc
-          elif bc.boundary_kind == 'robin':
-            if matrix is not None:
-              matrix[row,row] += bc.vals[0]
-            if vector is not None:
-              vector[row] += bc.vals[1]
-            
-          # dirichlet bc
-          elif bc.boundary_kind == 'dirichlet':
-            if matrix is not None:
-              matrix[row,row] = 1.0
-              for col in matrix[row].nonzero()[1]:
-                if row != col:
-                  matrix[row,col] = 0.0
-            if vector is not None:
-              vector[row] = bc.vals
+        # Assemble diffusion
+        k = material.k
+        if callable(k):
+            if not self.is_coupled:
+                T = fe_view.quadrature_solution(self.u)
+                k = k(T)
+            else:
+                raise NotImplementedError(
+                    "Only T dependent conductivities allowed."
+                )
+        self.cell_matrix *= 0
+        for i in range(self.porder+1):
+            row = fe_view.cell_dof_map(i)
+            for j in range(self.porder+1):
+                col = fe_view.cell_dof_map(j)
+                self.cell_matrix[i,j] += (
+                    fe_view.intV_gradShapeI_gradShapeJ(i, j, k)
+                )
+                rows += [row]
+                cols += [col]
+        vals += list(self.cell_matrix.ravel())
+        return rows, cols, vals
 
+    def assemble_cell_source(self, cell, time=0):
+        """ Assemble the source vector.
+
+        Parameters
+        ----------
+        cell : cell-like object
+        time : float, optional
+            The simulation time (default is 0).
+        """
+        rows, vals = [], []  
+        fe_view = self.sd.fe_views[cell.id]
+        material = self.materials[cell.imat]
+
+        # Assemble source
+        if hasattr(material, 'q'):
+            q = material.q
+            q = q(time) if callable(q) else q
+            if q != 0:
+                self.cell_vector *= 0
+                for i in range(self.porder+1):
+                    row = fe_view.cell_dof_map(i)
+                    self.cell_vector[i] = fe_view.intV_shapeI(i, q)
+                    rows += [row]
+                vals += list(self.cell_vector.ravel())
+        return rows, vals
+
+    def apply_bcs(self, matrix=None, vector=None):
+        """ Apply boundary conditions to matrix and vector.
+
+        This function requires either matrix, vector, or both
+        to be provided. If one of the two are provided, bounndary
+        conditions are only applied to the provided input.
+
+        Parameters
+        ----------
+        matrix : csr_matrix (n_dofs, n_dofs), default=None
+            The matrix to apply boundary conditions to.
+        vector : numpy.ndarray (n_dofs,), default=None
+            The vector to apply boundary conditions to.
+        """
+        for cell in self.mesh.bndry_cells:
+            fe_view = self.sd.fe_views[cell.id]
+
+            for f, face in enumerate(cell.faces):        
+                if face.flag > 0:
+                    bc = self.bcs[face.flag-1]
+                    row = fe_view.face_dof_map(f)
+
+                    # neumann bc
+                    if bc.boundary_kind == 'neumann':
+                        if vector is not None:
+                            vector[row] += bc.vals
+
+                    # robin bc
+                    elif bc.boundary_kind == 'robin':
+                        if matrix is not None:
+                            matrix[row,row] += bc.vals[0]
+                        if vector is not None:
+                            vector[row] += bc.vals[1]
+                        
+                    # dirichlet bc
+                    elif bc.boundary_kind == 'dirichlet':
+                        if matrix is not None:
+                            matrix[row,row] = 1.0
+                            for col in matrix[row].nonzero()[1]:
+                                if row != col:
+                                    matrix[row,col] = 0.0
+                        if vector is not None:
+                            vector[row] = bc.vals
+
+    def _validate_bcs(self, bcs):
+        """ Validate the boundary conditions.
+
+        Parameters
+        ----------
+        bcs : list of BC objects
+        """
+        for bc in bcs:
+            if bc.boundary_kind not in bc_kinds:
+                msg = "Approved BCs are:\n"
+                for kind in bc_kinds:
+                    msg += "{}\n".format(kind)
+                raise ValueError(msg)
+        return bcs
+
+    def _validate_ics(self, ics):
+        """ Validate the initial condition.
+
+        Parameters
+        ----------
+        ics : callable, None
+            The initial condition, or lack there of.
+        """
+        if ics is not None:
+            if not callable(ics):
+                msg = "Initial condition must be callable."
+                raise ValueError(msg)
+        return ics
 
 
