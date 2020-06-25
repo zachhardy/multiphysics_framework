@@ -22,8 +22,8 @@ class CellCFEView1D:
 
     # node information
     self.node_ids = np.arange(
-      cell.id*self.porder,
-      (cell.id+1)*self.porder+1,
+      cell.vertex_ids[0]*self.porder,
+      (cell.vertex_ids[0]+1)*self.porder+1,
       dtype=int)
     self.nodes = np.linspace(
       cell.vertices[0],
