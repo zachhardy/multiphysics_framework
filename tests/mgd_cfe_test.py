@@ -13,6 +13,7 @@ from mg_diffusion.neutronics_material \
 from mg_diffusion.cfe_mg_diffusion \
     import CFE_MultiGroupDiffusion
 
+
 ### Mesh
 # parameters
 r_b = 6.0 # domain width (cm)
@@ -41,17 +42,26 @@ problem = Problem(mesh, materials)
 
 ### Physics
 bc_L = BC('neumann', 0, [0., 0., 0.])
-bc_R = BC('dirichlet', 1, [0., 0., 0.])
+bc_R = BC('robin', 1, [0., 0., 0.])
 bcs = [bc_L, bc_R]
 ics = [lambda r: (r_b**2 - r**2) / r_b**2,
        lambda r: (r_b**2 - r**2) / r_b**2,
        lambda r: 0]
 mgd = CFE_MultiGroupDiffusion(problem, G, bcs, ics)
 
-problem.run_transient(verbosity=1, method='cn')
+k, u = mgd.solve_k_eigen_problem(verbosity=0)
 
 for g in range(G):
   beg = g * mgd.n_nodes
   end = beg + mgd.n_nodes
-  plt.plot(mgd.field.grid, problem.u[beg:end])
+  plt.plot(mgd.field.grid, u[beg:end])
 plt.show()
+
+
+# problem.run_transient(verbosity=1, method='tbdf2')
+
+# for g in range(G):
+#   beg = g * mgd.n_nodes
+#   end = beg + mgd.n_nodes
+#   plt.plot(mgd.field.grid, mgd.u[beg:end])
+# plt.show()
