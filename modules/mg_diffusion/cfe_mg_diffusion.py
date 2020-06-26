@@ -7,8 +7,9 @@ from field import Field
 from discretizations.cfe.cfe import CFE
 from physics.physics_system import PhysicsSystem
 from .neutronics_material import NeutronicsMaterial
+from .k_eigen import KEigenMixin
 
-class CFE_MultiGroupDiffusion(PhysicsSystem):
+class CFE_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
     """ Continuous finite element multigroup diffusion module. """
 
     name = 'flux'
@@ -34,9 +35,18 @@ class CFE_MultiGroupDiffusion(PhysicsSystem):
         npc = self.sd.nodes_per_cell
         self.cell_matrix = np.zeros((npc, npc))
         self.cell_vector = np.zeros(npc)
+        
+    def assemble_cell_physics(self, cell, keigen=False):
+        """ Assemble the spatial/energy physics operator. 
+        
+        If keigen is True, the fission term is ommitted, else
+        all neutron diffusion physics is considered.
 
-    def assemble_cell_physics(self, cell):
-        """ Assemble the spatial/energy physics operator. """
+        Parameters
+        ----------
+        cell : cell-like object
+            The cell to assemble the physics operator on.
+        """
         rows, cols, vals = [], [], []
         fe_view = self.sd.fe_views[cell.id]
         material = self.materials[cell.imat]
@@ -78,6 +88,43 @@ class CFE_MultiGroupDiffusion(PhysicsSystem):
                         vals += list(self.cell_matrix.ravel())
 
                 # Assemble fission
+                if not keigen:
+                    if hasattr(material, 'nu_sig_f'):
+                        chi = material.chi[ig]
+                        nu_sig_f = material.nu_sig_f[jg]
+                        if chi*nu_sig_f != 0:
+                            self.cell_matrix *= 0
+                            for i in range(self.porder+1):
+                                row = fe_view.cell_dof_map(i, ig)
+                                for j in range(self.porder+1):
+                                    col = fe_view.cell_dof_map(j, jg)
+                                    self.cell_matrix[i,j] -= (
+                                        fe_view.intV_shapeI_shapeJ(
+                                            i, j, chi*nu_sig_f
+                                        )
+                                    )
+                                    rows += [row]
+                                    cols += [col]
+                            vals += list(self.cell_matrix.ravel())
+        return rows, cols, vals
+
+    def assemble_cell_fission(self, cell):
+        """ Assemble the fission operator on this cell. 
+        
+        This routine is only used when calling a k-eigenvalue solver.
+
+        Parameters
+        ----------
+        cell : cell-like object
+            The cell to assemble the fission operator on.
+        """
+        rows, cols, vals = [], [], []
+        fe_view = self.sd.fe_views[cell.id]
+        material = self.materials[cell.imat]
+
+        for ig in range(self.G):
+            for jg in range(self.G):
+                # Assemble fission
                 if hasattr(material, 'nu_sig_f'):
                     chi = material.chi[ig]
                     nu_sig_f = material.nu_sig_f[jg]
@@ -87,7 +134,7 @@ class CFE_MultiGroupDiffusion(PhysicsSystem):
                             row = fe_view.cell_dof_map(i, ig)
                             for j in range(self.porder+1):
                                 col = fe_view.cell_dof_map(j, jg)
-                                self.cell_matrix[i,j] -= (
+                                self.cell_matrix[i,j] += (
                                     fe_view.intV_shapeI_shapeJ(
                                         i, j, chi*nu_sig_f
                                     )
@@ -169,14 +216,14 @@ class CFE_MultiGroupDiffusion(PhysicsSystem):
                         # neumann bc
                         if bc.boundary_kind == 'neumann':
                             if vector is not None:
-                                vector[row] += bc.vals[ig]
+                                vector[row] += face.area * bc.vals[ig]
 
                         # robin bc
                         elif bc.boundary_kind == 'robin':
                             if matrix is not None:
-                                matrix[row,row] += 0.5
+                                matrix[row,row] += face.area * 0.5
                             if vector is not None:
-                                vector[row] += 2.0*bc.vals[ig]
+                                vector[row] += face.area * 2.0*bc.vals[ig]
 
                         # dirichlet bc
                         elif bc.boundary_kind == 'dirichlet':

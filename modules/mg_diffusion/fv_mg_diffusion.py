@@ -7,10 +7,10 @@ from field import Field
 from discretizations.fv.fv import FV
 from physics.physics_system import PhysicsSystem
 from .neutronics_material import NeutronicsMaterial
+from .k_eigen import KEigenMixin
 
 
-
-class FV_MultiGroupDiffusion(PhysicsSystem):
+class FV_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
     """ Finite volume multigroup diffusion handler. """
     
     name = 'flux'
@@ -37,7 +37,7 @@ class FV_MultiGroupDiffusion(PhysicsSystem):
         # Additional information
         self.is_nonlinear = False
             
-    def assemble_cell_physics(self, cell):
+    def assemble_cell_physics(self, cell, keigen=False):
         """ Assemble the spatial/energy physics operator. """
         rows, cols, vals = [], [], []
         fv_view = self.sd.fv_views[cell.id]
@@ -66,13 +66,14 @@ class FV_MultiGroupDiffusion(PhysicsSystem):
                         vals += [-sig_s * volume]
 
                 # Assemble fission
-                if hasattr(material, 'nu_sig_f'):
-                    chi = material.chi[ig]
-                    nu_sig_f = material.nu_sig_f[jg]
-                    if chi*nu_sig_f != 0:
-                        rows += [row]
-                        cols += [col]
-                        vals += [-chi * nu_sig_f * volume]
+                if not keigen:
+                    if hasattr(material, 'nu_sig_f'):
+                        chi = material.chi[ig]
+                        nu_sig_f = material.nu_sig_f[jg]
+                        if chi*nu_sig_f != 0:
+                            rows += [row]
+                            cols += [col]
+                            vals += [-chi * nu_sig_f * volume]
 
         # Assemble interior diffusion
         for face in cell.faces:
@@ -99,6 +100,27 @@ class FV_MultiGroupDiffusion(PhysicsSystem):
                     rows += [row, row]
                     cols += [row, col]
                     vals += [val, -val]
+        return rows, cols, vals
+
+    def assemble_cell_fission(self, cell):
+        """ Assemble the fission term on cell. """
+        rows, cols, vals = [], [], []
+        fv_view = self.sd.fv_views[cell.id]
+        width = cell.width[0]
+        volume = cell.volume
+        material = self.materials[cell.imat]
+
+        for ig in range(self.G):
+            row = fv_view.cell_dof_map(ig)
+            for jg in range(self.G):
+                col = fv_view.cell_dof_map(jg)
+                if hasattr(material, 'nu_sig_f'):
+                    chi = material.chi[ig]
+                    nu_sig_f = material.nu_sig_f[jg]
+                    if chi*nu_sig_f != 0:
+                        rows += [row]
+                        cols += [col]
+                        vals += [chi * nu_sig_f * volume]
         return rows, cols, vals
 
     def assemble_cell_mass(self, cell):
@@ -155,7 +177,7 @@ class FV_MultiGroupDiffusion(PhysicsSystem):
         for cell in self.mesh.bndry_cells:
             fv_view = self.sd.fv_views[cell.id]
             material = self.materials[cell.imat]
-            width = cell.width
+            width = cell.width[0]
 
             for face in cell.faces:
                 if face.flag > 0:
