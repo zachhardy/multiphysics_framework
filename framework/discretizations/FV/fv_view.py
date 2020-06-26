@@ -25,6 +25,6 @@ class CellFVView1D:
     """ Map the local cell dof to a global dof. """
     return self.node_ids[0] + component*self.n_nodes
 
-  def solution_average(self, u):
+  def average_solution(self, u):
     """ Return the solution on this cell. """
-    return u[self.node_ids]
+    return float(u[self.node_ids])
