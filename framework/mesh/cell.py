@@ -35,7 +35,7 @@ class Cell1D:
     def GetCellVolume(self):
         """ Compute the volume of the cell. """
         if self.geom == 'slab':
-            return self.width
+            return self.width[0]
         elif self.geom == 'cylinder':
             return np.pi * (
                 self.vertices[1][0]**2
