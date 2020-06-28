@@ -22,7 +22,7 @@ class Field:
         self.name = name
         # Discretization information
         self.mesh = mesh
-        self.sd = discretization
+        self.discretization = discretization
         self.grid = discretization.grid
         self.n_nodes = discretization.n_nodes
         # Compnents information

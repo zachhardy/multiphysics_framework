@@ -10,8 +10,9 @@ class PhysicsBase:
         self.problem = problem
         self.mesh = problem.mesh
         self.materials = None
+        self.discretization = None
         self.field = None
-        self.sd = None
+        
 
         # Discritization info
         self.grid = []
@@ -43,9 +44,9 @@ class PhysicsBase:
         # Add the field to the field stack.
         self.problem.fields.append(self.field)
         # Add the discretization to the physics
-        self.sd = self.field.sd
-        self.grid = self.sd.grid
-        self.n_nodes = self.sd.n_nodes
+        self.discretization = self.field.discretization
+        self.grid = self.discretization.grid
+        self.n_nodes = self.discretization.n_nodes
         self.n_dofs = self.field.n_dofs
         # Set the beginning of the field dof range.
         self.field.dof_start = self.problem.n_dofs
