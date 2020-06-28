@@ -12,7 +12,6 @@ class PhysicsBase:
         self.materials = None
         self.discretization = None
         self.field = None
-        
 
         # Discritization info
         self.grid = []
@@ -26,6 +25,7 @@ class PhysicsBase:
         # Booleans for coupling and nonlinearity.
         self.is_coupled = False
         self.is_nonlinear = False
+        self.is_transient = False
 
     @property
     def u(self):
