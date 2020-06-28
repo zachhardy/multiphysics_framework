@@ -32,13 +32,7 @@ class KEigenMixin:
             phi = sum(phig)
             phi_tot = 0
             for cell in self.mesh.cells:
-                # Get the appropriate cell view
-                try:
-                    view = self.sd.fe_views[cell.id]
-                except:
-                    view = self.sd.fv_views[cell.id]
-                
-                # Increment total phi and volume
+                view = self.sd.cell_views[cell.id]
                 phi_tot += view.average_solution(phi)*cell.volume
             return phi_tot 
         

@@ -40,7 +40,7 @@ class FV_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
     def assemble_cell_physics(self, cell, keigen=False):
         """ Assemble the spatial/energy physics operator. """
         rows, cols, vals = [], [], []
-        fv_view = self.sd.fv_views[cell.id]
+        fv_view = self.sd.cell_views[cell.id]
         width = cell.width[0]
         volume = cell.volume
         material = self.materials[cell.imat]
@@ -80,7 +80,7 @@ class FV_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
             if face.flag == 0:
                 # Get information from the neighboring cell.
                 nbr_cell = self.mesh.cells[face.neighbor]
-                nbr_fv_view = self.sd.fv_views[nbr_cell.id]
+                nbr_fv_view = self.sd.cell_views[nbr_cell.id]
                 nbr_width = nbr_cell.width[0]
                 nbr_material = self.materials[nbr_cell.imat]
                 
@@ -105,8 +105,7 @@ class FV_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
     def assemble_cell_fission(self, cell):
         """ Assemble the fission term on cell. """
         rows, cols, vals = [], [], []
-        fv_view = self.sd.fv_views[cell.id]
-        width = cell.width[0]
+        fv_view = self.sd.cell_views[cell.id]
         volume = cell.volume
         material = self.materials[cell.imat]
 
@@ -126,7 +125,7 @@ class FV_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
     def assemble_cell_mass(self, cell):
         """ Assemble the time derivative term. """
         rows, cols, vals = [], [], []
-        fv_view = self.sd.fv_views[cell.id]
+        fv_view = self.sd.cell_views[cell.id]
         volume = cell.volume
         material = self.materials[cell.imat]
 
@@ -149,7 +148,7 @@ class FV_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
             The simulation time (default is 0).
         """
         rows, vals = [], []
-        fv_view = self.sd.fv_views[cell.id]
+        fv_view = self.sd.cell_views[cell.id]
         volume = cell.volume
         material = self.materials[cell.imat]
 
@@ -175,7 +174,7 @@ class FV_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
         vector : numpy.ndarray (n_dofs,)
         """
         for cell in self.mesh.bndry_cells:
-            fv_view = self.sd.fv_views[cell.id]
+            fv_view = self.sd.cell_views[cell.id]
             material = self.materials[cell.imat]
             width = cell.width[0]
 

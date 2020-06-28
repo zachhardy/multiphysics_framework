@@ -48,7 +48,7 @@ class CFE_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
             The cell to assemble the physics operator on.
         """
         rows, cols, vals = [], [], []
-        fe_view = self.sd.fe_views[cell.id]
+        fe_view = self.sd.cell_views[cell.id]
         material = self.materials[cell.imat]
 
         for ig in range(self.G):
@@ -119,7 +119,7 @@ class CFE_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
             The cell to assemble the fission operator on.
         """
         rows, cols, vals = [], [], []
-        fe_view = self.sd.fe_views[cell.id]
+        fe_view = self.sd.cell_views[cell.id]
         material = self.materials[cell.imat]
 
         for ig in range(self.G):
@@ -147,7 +147,7 @@ class CFE_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
     def assemble_cell_mass(self, cell):
         """ Assemble the time derivative term. """
         rows, cols, vals = [], [], []
-        fe_view = self.sd.fe_views[cell.id]
+        fe_view = self.sd.cell_views[cell.id]
         material = self.materials[cell.imat]
 
         # assemble group-wise
@@ -176,7 +176,7 @@ class CFE_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
             The simulation time (default is 0).
         """
         rows, vals = [], []
-        fe_view = self.sd.fe_views[cell.id]
+        fe_view = self.sd.cell_views[cell.id]
         material = self.materials[cell.imat]
 
         for ig in range(self.G):
@@ -203,7 +203,7 @@ class CFE_MultiGroupDiffusion(PhysicsSystem, KEigenMixin):
         """
         # iterate over bndry cells and faces
         for cell in self.mesh.bndry_cells:
-            fe_view = self.sd.fe_views[cell.id]
+            fe_view = self.sd.cell_views[cell.id]
             
             for f, face in enumerate(cell.faces):        
                 if face.flag > 0:

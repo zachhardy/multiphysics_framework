@@ -64,7 +64,7 @@ class CFE_HeatConduction(PhysicsSystem):
         cell : cell-like
         """
         rows, cols, vals = [], [], []
-        fe_view = self.sd.fe_views[cell.id]
+        fe_view = self.sd.cell_views[cell.id]
         material = self.materials[cell.imat]
 
         # Assemble diffusion
@@ -100,7 +100,7 @@ class CFE_HeatConduction(PhysicsSystem):
             The simulation time (default is 0).
         """
         rows, vals = [], []  
-        fe_view = self.sd.fe_views[cell.id]
+        fe_view = self.sd.cell_views[cell.id]
         material = self.materials[cell.imat]
 
         # Assemble source
@@ -131,7 +131,7 @@ class CFE_HeatConduction(PhysicsSystem):
             The vector to apply boundary conditions to.
         """
         for cell in self.mesh.bndry_cells:
-            fe_view = self.sd.fe_views[cell.id]
+            fe_view = self.sd.cell_views[cell.id]
 
             for f, face in enumerate(cell.faces):        
                 if face.flag > 0:
