@@ -36,8 +36,8 @@ class NeutronicsMaterial(MaterialBase):
     material_type = 'neutronics'
     
     def __init__(self, material_id=0, Na=1., sig_r=[], sig_t=[], 
-         D=[], sig_s=[], nu_sig_f=[],
-         chi=[], v=[], q=[]):
+                 D=[], sig_s=[], nu_sig_f=[],
+                 chi=[], v=[], q=[]):
         super().__init__(material_id)
         
         # Atom density
