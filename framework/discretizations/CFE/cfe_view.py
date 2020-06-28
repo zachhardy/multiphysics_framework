@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import numpy as np
 
 class CellCFEView1D:
@@ -41,7 +39,7 @@ class CellCFEView1D:
         self.qpoint_glob = self.get_global_qpoints()
         self.Jcoord = self.get_coord_sys_jacobian()
 
-        # shape function information
+        # Shape function information
         self._shape = discretization._shape
         self._grad_shape = discretization._grad_shape
         self.shape_values = self.get_shape_values()

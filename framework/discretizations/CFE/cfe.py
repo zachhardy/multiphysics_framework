@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import numpy as np
 from ..discretization import Discretization
 from .cfe_view import CellCFEView1D
@@ -13,24 +11,24 @@ class CFE(Discretization):
         self.nodes_per_cell = porder + 1
         self.porder = 1
         self.qrule = GLQuadrature(n_qpts)
-        
-        # Lagrange elements
+
+        # Generate the finite elements
         tmp = lagrange_elements(porder)
         self._shape = tmp[0]
         self._grad_shape = tmp[1]
 
-        fe_views = []
+        # Generate the cell views
         for cell in mesh.cells:
-            fe_views.append(CellCFEView1D(self, cell))
-        self.fe_views = fe_views
+            self.cell_views.append(CellCFEView1D(self, cell))
 
+        # Generate the grid of unique unknowns
         self.grid = self.create_grid() 
 
     def create_grid(self):
         """ Generate the grid of unknowns. """
         grid = []
-        for fe_view in self.fe_views:
-            grid.extend(fe_view.nodes)
+        for view in self.cell_views:
+            grid.extend(view.nodes)
         grid = np.atleast_2d(grid)
         return np.unique(grid, axis=0)
         

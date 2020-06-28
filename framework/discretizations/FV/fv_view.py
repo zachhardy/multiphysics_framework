@@ -10,12 +10,12 @@ class CellFVView1D:
   cell : CellBase
   """
   def __init__(self, discretization, cell):
-    # general information
+    # General information
     self.geom = discretization.geom
     self.n_nodes = discretization.n_nodes
     self.nodes_per_cell = 1
 
-    # node information
+    # Node information
     self.node_ids = [cell.id]
     self.nodes = np.atleast_2d(
       np.average(cell.vertices, axis=0)

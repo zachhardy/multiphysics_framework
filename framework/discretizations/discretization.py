@@ -9,6 +9,7 @@ class Discretization:
     self.dim = mesh.dim
     self.geom = mesh.geom
     self.n_nodes = 0
+    self.cell_views = []
     self.grid = None
 
   def create_grid(self):
