@@ -18,10 +18,11 @@ class Field:
         The number of components this field has
         (default is 1).
     """
-    def __init__(self, name, mesh, discretization, components=1):
+    def __init__(self, name, problem, discretization, components=1):
         self.name = name
         # Discretization information
-        self.mesh = mesh
+        self.problem = problem
+        self.mesh = problem.mesh
         self.discretization = discretization
         self.grid = discretization.grid
         self.n_nodes = discretization.n_nodes
@@ -31,6 +32,16 @@ class Field:
         # Global DoF information
         self.dof_start = 0
         self.dof_end = 0
+
+    @property
+    def u(self):
+        """ Get the solution vector for this physics. """
+        return self.problem.u[self.dofs[0]:self.dofs[-1]+1]
+
+    @property
+    def u_old(self):
+        """ Get the old solution vector for this physics. """
+        return self.problem.u_old[self.dofs[0]:self.dofs[-1]+1]
 
     @property
     def dofs(self):

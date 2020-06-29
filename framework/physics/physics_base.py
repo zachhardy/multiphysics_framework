@@ -27,18 +27,6 @@ class PhysicsBase:
         self.is_nonlinear = False
         self.is_transient = False
 
-    @property
-    def u(self):
-        """ Get the solution vector for this physics. """
-        dofs = self.field.dofs
-        return self.problem.u[dofs[0]:dofs[-1]+1]
-
-    @property
-    def u_old(self):
-        """ Get the old solution vector for this physics. """
-        dofs = self.field.dofs
-        return self.problem.u_old[dofs[0]:dofs[-1]+1]
-
     def _register_field(self):
         """ Register this field into the problem. """
         # Add the field to the field stack.
