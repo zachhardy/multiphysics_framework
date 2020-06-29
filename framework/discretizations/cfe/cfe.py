@@ -5,6 +5,9 @@ from quadrature import GLQuadrature
 
 class CFE(Discretization):
     """ Continuous finite element discretization. """
+
+    dtype = 'cfe'
+
     def __init__(self, mesh, porder=1, n_qpts=2):
         super().__init__(mesh)
         self.n_nodes = porder*mesh.n_el + 1

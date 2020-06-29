@@ -3,12 +3,10 @@ from ..discretization import Discretization
 from .fv_view import CellFVView1D
 
 class FV(Discretization):
-  """ Class doe Finite Volume discretizations. 
+  """ Finite volume discretizations. """
+
+  dtype = 'fv'
   
-  Parameters
-  ----------
-  mesh : MeshBase object.
-  """
   def __init__(self, mesh):
     super().__init__(mesh)
     self.n_nodes = self.mesh.n_el
