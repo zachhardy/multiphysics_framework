@@ -1,15 +1,8 @@
-#!/usr/bin/env python3
-
 import numpy as np
 from .solver_base import SolverBase
 
 class OperatorSplitting(SolverBase):
-    """ Operator splitting solver.
 
-    Parameters
-    ----------
-    problem : Problem
-    """
     def __init__(self, problem):
         super().__init__(problem)
         # Nonlinear parameters
@@ -20,16 +13,6 @@ class OperatorSplitting(SolverBase):
         self.u_ell = np.copy(self.u)
         
     def solve_system(self, *args):
-        """ Run a steady state problem. 
-        
-        Parameters
-        ----------
-        args : tuple
-            Inputs for transient systems. The ordering
-            should be time, dt, method, and u_half.
-            The first three are mandatory and the last
-            is defaulted to None.
-        """
         # Initialize u_ell with current solution
         self.u_ell[:] = self.u
         # Nonlinear iterations

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import sys
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -7,14 +5,12 @@ from scipy.sparse.linalg import spsolve
 from .physics_base import PhysicsBase
 
 class PhysicsSystem(PhysicsBase):
-    """ Class for physics that use a system of equation. """
+
     def __init__(self, problem, bcs, ics=None):
         super().__init__(problem)
-
         # Validate boundary and initial conditions.
         self.bcs = self._validate_bcs(bcs)
-        self.ics = self._validate_ics(ics)        
-
+        self.ics = self._validate_ics(ics)
         # Setup system storage
         self.A = None
         self.b = None
@@ -22,33 +18,15 @@ class PhysicsSystem(PhysicsBase):
             self.f_old = None
             self.M = None
 
-    def solve_system(
-            self, time=None, dt=None, 
-            method=None, u_half=None):
-        """ Solve a time step of a transient problem. 
-        
-        Parameters
-        ----------
-        time : float, optional
-            The simulation time before the time step.
-            This is a mandatory input for transients.
-        dt : float
-            The time step size. This is a mandatory
-            input for transients.
-        method : str
-            The time stepping method. This is a mandatory
-            input for transients.
-        u_half : numpy.ndarray (n_dofs,)
-            An optional solution vector required for certain
-            time stepping methods.
-        """
+    def solve_system(self, time=None, dt=None, 
+                     method=None, u_half=None):
         # Assemble and solve a steady state system.
         if not self.problem.is_transient:
             # Note that for steady state, boundary conditions
             # are applied in the assembly routines.
             self.assemble_physics()
             self.assemble_source()
-            self.u[:] = spsolve(self.A, self.b)
+            self.field.u[:] = spsolve(self.A, self.b)
 
         # Assemble and solve a transient system.
         else:
@@ -58,7 +36,7 @@ class PhysicsSystem(PhysicsBase):
 
             # Shorthand for common use variables
             A, M, rhs = self.A, self.M, self.b
-            u_old, f_old = self.u_old, self.f_old
+            u_old, f_old = self.field.u_old, self.f_old
             
             # Assemble a Forward Euler system.
             if method == 'fwd_euler':
@@ -89,10 +67,9 @@ class PhysicsSystem(PhysicsBase):
 
             # Apply boundary conditions and solve.
             self.apply_bcs(matrix, rhs)
-            self.u[:] = spsolve(matrix, rhs)
+            self.field.u[:] = spsolve(matrix, rhs)
             
     def assemble_physics(self):
-        """ Assemble the physics operator. """
         if self.is_nonlinear or self.A is None:
             Arows, Acols, Avals = [], [], []
             for cell in self.mesh.cells:
@@ -106,7 +83,6 @@ class PhysicsSystem(PhysicsBase):
                 self.apply_bcs(matrix=self.A)
 
     def assemble_mass(self):
-        """ Assemble the time derivative operator. """
         if self.is_nonlinear or self.M is None:
             Mrows, Mvals, Mcols = [], [], []
             for cell in self.mesh.cells:
@@ -118,7 +94,6 @@ class PhysicsSystem(PhysicsBase):
             self.M = csr_matrix((Mvals, (Mrows, Mcols)), shape)
 
     def assemble_source(self, time=0):
-        """ Assemble the forcing term vector at time. """
         self.b = np.zeros(self.n_dofs) if self.b is None else 0*self.b
         for cell in self.mesh.cells:
             rows, vals = self.assemble_cell_source(cell, time)
@@ -128,10 +103,9 @@ class PhysicsSystem(PhysicsBase):
             self.apply_bcs(vector=self.b)
 
     def recompute_old_physics_action(self):
-        """ Compute the old physics action. """
         if self.A is None:
             self.assemble_physics()
-        self.f_old[:] = self.A @ self.u_old
+        self.f_old[:] = self.A @ self.field.u_old
 
     def assemble_cell_physics(self, cell):
         raise NotImplementedError
@@ -146,7 +120,6 @@ class PhysicsSystem(PhysicsBase):
         raise NotImplementedError
 
     def _register_field(self):
-        """ Register the field with the problem. """
         self.b = np.zeros(self.field.n_dofs)
         self.f_old = np.zeros(self.b.shape)
         super()._register_field()

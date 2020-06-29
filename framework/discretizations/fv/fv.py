@@ -3,7 +3,6 @@ from ..discretization import Discretization
 from .fv_view import CellFVView1D
 
 class FV(Discretization):
-  """ Finite volume discretizations. """
 
   dtype = 'fv'
   
@@ -20,7 +19,6 @@ class FV(Discretization):
     self.grid = self.create_grid()
 
   def create_grid(self):
-    """ Generate the grid of unknowns. """
     grid = []
     for view in self.cell_views:
       grid.extend(view.nodes)

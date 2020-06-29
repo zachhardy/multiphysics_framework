@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
-
-import numpy as np
-
 class Discretization:
-  """ Base class to describe a spatial discretization. """
+
   def __init__(self, mesh):
     self.mesh = mesh
     self.dim = mesh.dim

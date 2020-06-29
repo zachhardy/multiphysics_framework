@@ -1,10 +1,10 @@
 import numpy as np
+
 from ..discretization import Discretization
 from .cfe_view import CellCFEView1D
 from quadrature import GLQuadrature
 
 class CFE(Discretization):
-    """ Continuous finite element discretization. """
 
     dtype = 'cfe'
 
@@ -28,7 +28,6 @@ class CFE(Discretization):
         self.grid = self.create_grid() 
 
     def create_grid(self):
-        """ Generate the grid of unknowns. """
         grid = []
         for view in self.cell_views:
             grid.extend(view.nodes)
@@ -40,18 +39,6 @@ class CFE(Discretization):
 
 
 def lagrange_elements(porder):
-    """ Generate Lagrange interpolants of order porder.
-
-    Parameters
-    ----------
-    porder: int
-        The polynomial order.
-
-    Returns
-    -------
-    Polynomial object lists containing the interpolants and
-    their derivatives.
-    """
     from scipy.interpolate import lagrange
 
     bf, dbf = [], []

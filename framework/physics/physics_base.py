@@ -1,10 +1,8 @@
-#!/usr/bin/env python3
-
 import numpy as np
 import numpy.linalg as npla
 
 class PhysicsBase:
-    """ Template class for physics modules. """
+
     def __init__(self, problem):
         problem.physics.append(self)
         self.problem = problem
@@ -28,7 +26,6 @@ class PhysicsBase:
         self.is_transient = False
 
     def _register_field(self):
-        """ Register this field into the problem. """
         # Add the field to the field stack.
         self.problem.fields.append(self.field)
         # Add the discretization to the physics
@@ -54,7 +51,6 @@ class PhysicsBase:
         raise NotImplementedError
         
     def _parse_materials(self, material_type):
-        """ Get neutronics properties and sort by zone. """
         materials = []
         for material in self.problem.materials:
             if material.material_type == material_type:
