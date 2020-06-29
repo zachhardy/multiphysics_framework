@@ -1,6 +1,3 @@
-import numpy as np
-import numpy.linalg as npla
-
 class PhysicsBase:
 
     def __init__(self, problem):

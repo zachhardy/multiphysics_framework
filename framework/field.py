@@ -1,6 +1,3 @@
-import sys
-import numpy as np
-
 class Field:
 
     def __init__(self, name, problem, discretization, components=1):
