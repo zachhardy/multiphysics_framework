@@ -46,33 +46,40 @@ class GroupFVMixin:
                 self.M[row,row] += cell.volume / v
             self.M = self.M.tocsr()
 
-    def assemble_fv_source(self, group, time=0):
+    def assemble_fv_forcing(self, time):
         for cell in self.mesh.cells:
             view = self.discretization.cell_views[cell.id]
             material = self.materials[cell.imat]
             row = view.cell_dof_map()
-            u_ell = group.field.u[row]
-            # Source term
-            if self.group_num == group.group_num:
-                if hasattr(material, 'q'):
-                    q = material.q[self.group_num]
-                    if q != 0:
-                        q = q(time) if callable(q) else q
-                        self.b[row] += q * cell.volume
-            # Scattering
-            if hasattr(material, 'sig_s'):
-                sig_s = material.sig_s[group.group_num][self.group_num]
-                if sig_s != 0:
-                    self.b[row] += sig_s * u_ell * cell.volume
+            if hasattr(material, 'q'):
+                q = material.q[self.group_num]
+                if q != 0:
+                    q = q(time) if callable(q) else q
+                    self.rhs[row] += q * cell.volume
+
+    def fv_fission_and_scattering_source(self, u, f):
+        for cell in self.mesh.cells:
+            view = self.discretization.cell_views[cell.id]
+            material = self.materials[cell.imat]
+            row = view.cell_dof_map()
             # Fission
             if hasattr(material, 'nu_sig_f'):
-                nu_sig_f = material.nu_sig_f[group.group_num]
-                chi = material.chi[self.group_num]
-                if chi * nu_sig_f != 0:
-                    self.b[row] += chi * nu_sig_f * u_ell * cell.volume
-        if not self.problem.is_transient:
-            self.apply_fv_bcs(vector=self.b)
-   
+                for group in self.mgd.groups:
+                    gprime = group.group_num
+                    chi = material.chi[self.group_num]
+                    nu_sig_f = material.nu_sig_f[gprime]
+                    if chi*nu_sig_f != 0:
+                        u_i = u[group.field.dofs[row]]
+                        f[row] -= chi*nu_sig_f * u_i * cell.volume
+            # Scattering
+            if hasattr(material, 'sig_s'):
+                for group in self.mgd.groups:
+                    gprime = group.group_num
+                    sig_s = material.sig_s[gprime][self.group_num]
+                    if sig_s != 0:
+                        u_i = u[group.field.dofs[row]]
+                        f[row] -= sig_s * u_i * cell.volume
+
     def compute_fv_fission_power(self):
         fission_power = 0
         for cell in self.mesh.cells:

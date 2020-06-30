@@ -19,20 +19,27 @@ class Group(GroupFVMixin, GroupCFEMixin, DiscreteSystem):
         # Boolean flags
         self.is_nonlinear = mgd.is_nonlinear
         self.is_coupled = mgd.is_coupled
+        # Initialize vectors
+        self.rhs = np.zeros(self.field.n_dofs)
+        self.f_ell = np.zeros(self.field.n_dofs)
+        self.f_old = np.zeros(self.field.n_dofs)
 
-    def assemble_source(self, time=0):
-        if self.b is None:
-            self.b = np.zeros(self.field.n_dofs)
-        self.b *= 0
-        for group in self.mgd.groups:
-            if self.discretization.dtype == 'fv':
-                self.assemble_fv_source(group, time)
-            elif self.discretization.dtype == 'cfe':
-                pass
-
-    def compute_fission_source(self):
+    def lagged_operator_action(self, ell, f):
+        f[:] = 0
+        u = self.problem.u_ell if ell else self.problem.u_old
         if self.discretization.dtype == 'fv':
-            return self.compute_fv_fission_source()
+            self.fv_fission_and_scattering_source(u, f)
         elif self.discretization.dtype == 'cfe':
             pass
 
+    def compute_old_physics_action(self):
+        self.lagged_operator_action(False, self.f_old)
+        super().compute_old_physics_action()
+        
+    def compute_fission_power(self):
+        if self.discretization.dtype == 'fv':
+            return self.compute_fv_fission_power()
+        elif self.discretization.dtype == 'cfe':
+            pass
+
+    

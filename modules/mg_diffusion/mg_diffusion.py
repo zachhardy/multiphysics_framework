@@ -48,8 +48,7 @@ class MultiGroupDiffusion(PhysicsBase):
                 group.assemble_physics()
                 # Handle steady state problem
                 if not self.problem.is_transient:
-                    group.assemble_source()
-                    group.field.u[:] = spsolve(group.A, group.b)
+                    group.solve_steady_state()
                 # Handle time step of a transient
                 else:
                     group.assemble_mass()
@@ -76,34 +75,32 @@ class MultiGroupDiffusion(PhysicsBase):
         return fission_source
 
     def compute_k_eigenvalue(self, tol=1e-8, maxit=100, verbosity=0):
-        # Prepare problem
+        # Prepare problem by setting to steady state, setting
+        # the inhomogeneous source to zero, and initializing a 
+        # an iteration vector.
         self.problem.is_transient = False
         for material in self.materials:
             if hasattr(material, 'q'):
                 material.q = np.zeros(self.n_grps)
-        self.problem.u_ell = np.copy(self.problem.u)
-        # Initialize initial guesses
-        for group in self.groups:
-            group.field.u[:] = 1
-            group.field.u_ell[:] = group.field.u
-        k_eff_old = 1
-        converged = False
-        # Initialize operators
+
+        # Initialize initial guesses and operators
         for group in self.groups:
             group.assemble_physics()
-
+            group.field.u_ell[:] = 1
+        k_eff_old = 1
+        
         # Inverse power iterations
+        converged = False
         for nit in range(maxit):
-            # Assemble the source and solve
+            # Solve group-wise and compute new k-eff
             for group in self.groups:
-                group.assemble_source()
-                group.field.u[:] = spsolve(group.A, group.b)
-            # Compute the new k effective and normalize
-            # the updated flux profile to this value.
-            k_eff = self.compute_fission_source()
+                group.solve_steady_state()
+                group.field.u_ell[:] = group.field.u
+            k_eff = self.compute_fission_power()
+            # Reinit and normalize group fluxes
             for group in self.groups:
-                group.field.u[:] /= k_eff
-            # Compute the change in k effective
+                group.field.u_ell[:] = group.field.u / k_eff
+            # Compute the change in k-eff and reinit
             k_error = np.abs(k_eff-k_eff_old) / np.abs(k_eff)
             k_eff_old = k_eff
             # Check convergence
@@ -111,22 +108,11 @@ class MultiGroupDiffusion(PhysicsBase):
                 converged = True
                 break
             
-            # Iteration info printouts
-            if verbosity > 0:
-                msg = "\nIteration {}".format(nit)
-                delim = '-'*len(msg)
-                msg = '\n'.join(['', msg, delim])
-                print(msg)
-                print('k:\t\t{:.3e}'.format(k_eff))
-                print('k Error:\t{:.3e}'.format(k_error))
-        # Summary printouts
-        if converged:
-            print("\n*** Simulation converged ***")
-            print("Converged k:\t\t{:.5e}".format(k_eff))
-        else:
-            print("\n*** WARNING: Simulation did not converge ***")
-            print("Unconverged k:\t\t{:.5e}".format(k_eff))
-        print("Final k Error:\t\t{:.3e}".format(k_error))
+            # Iteration printouts
+            if verbosity > 1:
+                self.print_k_iter_summary(nit, k_eff, k_error)
+        self.print_k_calc_summary(converged, nit, k_eff, k_error)
+        
 
     def _validate_materials(self, materials):
         n_grps = materials[0].n_grps
@@ -160,3 +146,22 @@ class MultiGroupDiffusion(PhysicsBase):
                 "All initial conditions must be callable."
             )
         return ics
+
+    @staticmethod
+    def print_k_iter_summary(nit, k_eff, k_error):
+        msg = "\nIteration {}".format(nit)
+        delim = '-'*len(msg)
+        msg = '\n'.join(['', msg, delim])
+        print(msg)
+        print('k-eff:\t\t{:.3e}'.format(k_eff))
+        print('k Error:\t{:.3e}'.format(k_error))
+
+    @staticmethod
+    def print_k_calc_summary(converged, nit, k_eff, k_error):
+        if converged:
+            print("\n*** Simulation converged in {} iterations ***".format(nit))
+            print("Converged k:\t\t{:.5e}".format(k_eff))
+        else:
+            print("\n*** WARNING: Simulation did not converge ***")
+            print("Unconverged k:\t\t{:.5e}".format(k_eff))
+        print("Final k Error:\t\t{:.3e}".format(k_error))
