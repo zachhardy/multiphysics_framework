@@ -42,6 +42,7 @@ class PhysicsBase:
         self.problem.n_fields += 1
         self.problem.n_dofs += field.n_dofs
         self.problem.u.resize(self.problem.n_dofs)
+        self.problem.u_ell.resize(self.problem.n_dofs)
         # Set the end of the field dof range.
         field.dof_end = self.problem.n_dofs
 
