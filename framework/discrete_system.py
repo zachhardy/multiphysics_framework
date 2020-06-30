@@ -74,7 +74,7 @@ class DiscreteSystem:
         elif self.discretization.dtype == 'cfe':
             pass
 
-    def recompute_old_physics_action(self):
+    def compute_old_physics_action(self):
         if self.A is None:
             self.assemble_physics()
         self.f_old = self.A @ self.field.u_old
