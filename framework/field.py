@@ -20,6 +20,10 @@ class Field:
         return self.problem.u[self.dofs[0]:self.dofs[-1]+1]
 
     @property
+    def u_ell(self):
+        return self.problem.u_ell[self.dofs[0]:self.dofs[-1]+1]
+
+    @property
     def u_old(self):
         return self.problem.u_old[self.dofs[0]:self.dofs[-1]+1]
 
@@ -28,6 +32,6 @@ class Field:
         return list(range(self.dof_start, self.dof_end))
     
     def component_dofs(self, component=0):
-        start = self.dof_start + component*self.n_nodes
+        start = component*self.n_nodes
         end = start + self.n_nodes
         return self.dofs[start:end]
