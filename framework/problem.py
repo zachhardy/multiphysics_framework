@@ -3,30 +3,36 @@ import matplotlib.pyplot as plt
 from solvers.operator_splitting import OperatorSplitting
 
 class Problem:
+
+    # Objects
+    mesh = None
+    materials = []
+    physics = []
+    fields = []
+    solver = None
+    # Field information
+    n_dofs = 0
+    n_fields = 0
+    # Solution vectors
+    u = np.array([])
+    u_ell = np.array([])
+    u_old = np.array([])
+    # Other parameters
+    tol = 1e-6
+    maxit = 100
+    verbosity = 0
     
     def __init__(self, mesh, materials):
         self.mesh = mesh
         self.materials = materials
-        self.physics = []
-        self.fields = []
-        self.solver = None
-        # Field info
-        self.n_dofs = 0
-        self.n_fields = 0
-        # Solution vector
-        self.u = np.array([])
-        # Other parameters
-        self.tol = 1e-6
-        self.maxit = 100
-        self.verbosity = 0
-
+        
     def run_steady_state(self, solver_type='os', tol=1e-6, 
                          maxit=100, verbosity=2):
         self.verbosity = verbosity
         self.is_transient = False
-        # Nonlinear parameters
         self.tol = tol
         self.maxit = maxit
+        self.u_ell = np.copy(self.u)
         # Initialize a solver and solve.
         self.solver = OperatorSplitting(self)
         self.solver.solve_system()
@@ -36,7 +42,6 @@ class Problem:
                       maxit=100, verbosity=0):
         self.verbosity = verbosity
         self.is_transient = True
-        # Nonlinear parameters
         self.tol = tol
         self.maxit = maxit
         # Initialize time stepping parameters.
@@ -48,8 +53,8 @@ class Problem:
             u_half = np.copy(self.u)
 
         # Initialize a solver and start time stepping.
-        self.solver = OperatorSplitting(self)
         self.evauluate_ics()
+        self.solver = OperatorSplitting(self)
         while time < tend:
             step += 1
             if self.verbosity > 0:
@@ -61,7 +66,7 @@ class Problem:
                 print(msg)
 
             # Compute old physics action
-            self.recompute_old_physics_action()
+            self.compute_old_physics_action()
 
             # Handle single step methods.
             if method != 'tbdf2':
@@ -86,14 +91,23 @@ class Problem:
 
     def evauluate_ics(self):
         for physic in self.physics:
-            field = physic.field
-            for c in range(field.components):
-                dofs = field.component_dofs(c)
-                grid = field.grid.ravel()
-                self.u[dofs] = physic.ics[c](grid)
+            fields = physic.fields
+            for f, field in enumerate(fields):
+                for c in range(field.components):
+                    dofs = field.component_dofs(c)
+                    grid = field.grid.ravel()
+                    # NOTE: This implies that fields have only 
+                    # one component. If several fields live in 
+                    # one physics and any of those fields have 
+                    # multiple components, this will fail. A
+                    # potential fix is to make ICs a list of 
+                    # lists instead of just a list.
+                    self.u[dofs] = physic.ics[f](grid)
+        self.u_ell = np.copy(self.u)
         self.u_old = np.copy(self.u)
 
-    def recompute_old_physics_action(self):
+    def compute_old_physics_action(self):
         for physic in self.physics:
-            physic.recompute_old_physics_action()        
+            physic.compute_old_physics_action()
+
         
