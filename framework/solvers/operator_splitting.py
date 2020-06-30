@@ -10,7 +10,7 @@ class OperatorSplitting(SolverBase):
         self.maxit = problem.maxit  
         # Solution vectors  
         self.u = problem.u
-        self.u_ell = np.copy(self.u)
+        self.u_ell = np.copy(problem.u_ell)
         
     def solve_system(self, *args):
         # Initialize u_ell with current solution
