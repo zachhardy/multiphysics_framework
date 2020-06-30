@@ -50,7 +50,7 @@ class Problem:
         step = 0
         # Create additional storage for mulit-step methods.
         if method == 'tbdf2':
-            u_half = np.copy(self.u)
+            u_tmp = np.copy(self.u)
 
         # Initialize a solver and start time stepping.
         self.evauluate_ics()
@@ -78,9 +78,9 @@ class Problem:
                 # Take a half step with Crank Nicholson.
                 self.solver.solve_system(time, dt/2, 'cn')
                 # Store the result for use in BDF2.
-                u_half[:] = self.u 
+                u_tmp[:] = self.u 
                 # Take another half step with BDF2.
-                self.solver.solve_system(time+dt/2, dt/2, 'bdf2', u_half)
+                self.solver.solve_system(time+dt/2, dt/2, 'bdf2', u_tmp)
 
             time += dt
             # If the next time step pushes time beyond tend, change the
