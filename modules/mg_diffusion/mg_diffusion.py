@@ -1,8 +1,6 @@
 import numpy as np
 from numpy.linalg import norm
 from scipy.sparse.linalg import spsolve
-import time
-
 
 from field import Field
 from .group.group import Group
@@ -40,7 +38,7 @@ class MultiGroupDiffusion(PhysicsBase):
             self._register_field(field)
             self.groups.append(Group(self, field, g))
         
-    def solve_system(self, time=None, dt=None, method=None, u_half=None):
+    def solve_system(self, time=None, dt=None, method=None, u_tmp=None):
         converged = False
         for nit in range(self.maxit):
             diff = 0
@@ -52,7 +50,7 @@ class MultiGroupDiffusion(PhysicsBase):
                 # Handle time step of a transient
                 else:
                     group.assemble_mass()
-                    group.solve_time_step(time, dt, method, u_half)
+                    group.solve_time_step(time, dt, method, u_tmp)
                 # Compute the difference and reinit
                 diff += norm(group.field.u-group.field.u_ell, ord=2)
                 group.field.u_ell[:] = group.field.u
