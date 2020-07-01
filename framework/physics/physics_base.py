@@ -1,29 +1,25 @@
 class PhysicsBase:
 
-    problem = None
-    mesh = None
-    materials = []
-    discretization = None
-    fields = []
-
-    # Discritization info
-    grid = []
-    n_nodes = 0
-    n_dofs = 0
-
-    # Boundary and initial conditions
-    bcs = []
-    ics = []
-
-    # Boolean flags
-    is_coupled = False
-    is_nonlinear = False
-
     def __init__(self, problem):
         # Add the physics to the physics stack
         problem.physics.append(self)
         self.problem = problem
         self.mesh = problem.mesh
+        self.materials = []
+        self.fields = []
+
+        # Discritization info
+        self.grid = []
+        self.n_nodes = 0
+        self.n_dofs = 0
+
+        # Boundary and initial conditions
+        self.bcs = []
+        self.ics = []
+
+        # Boolean flags
+        self.is_coupled = False
+        self.is_nonlinear = False
 
     def _register_field(self, field):
         # Add the field to the field stack.

@@ -4,29 +4,49 @@ from scipy.sparse.linalg import spsolve
 
 class DiscreteSystem:
 
-    # System information
-    A = None
-    M = None
-    f_ell = None
-    f_old = None
-    rhs = None
-    # Objects
-    mesh = None
-    discretization = None
-    field = None
-    # Boundary and initial conditions
-    bcs = []
-    ics = []
+    def __init__(self, field, bcs):
+        # Objects
+        self.field = field
+        self.mesh = field.mesh
+        self.discretization = field.discretization
+        self.bcs = bcs
+
+        # System information
+        self.A = None
+        self.M = None
+        self.f_ell = np.zeros(self.field.n_dofs)
+        self.f_old = np.zeros(self.field.n_dofs)
+        self.rhs = np.zeros(self.field.n_dofs)
+
+    def assemble_physics(self):
+        raise NotImplementedError
+
+    def assemble_mass(self):
+        raise NotImplementedError
+
+    def assemble_forcing(self, time=0):
+        raise NotImplementedError
+
+    def lagged_operator_action(self):
+        raise NotImplementedError
+
+    def apply_bcs(self):
+        raise NotImplementedError
 
     def solve_steady_state(self):
         self.assemble_physics()
         self.assemble_forcing()
-        self.lagged_operator_action(True, self.f_ell)
+        self.lagged_operator_action()
         self.rhs -= self.f_ell
         self.apply_bcs(vector=self.rhs)
         self.field.u[:] = spsolve(self.A, self.rhs)
 
     def solve_time_step(self, time, dt, method, u_tmp):
+        # Assemble matrices
+        self.assemble_physics()
+        self.assemble_mass()
+
+        # Shorthand
         A, M, rhs = self.A, self.M, self.rhs
         f_ell, f_old = self.f_ell, self.f_old
         u_old = self.field.u_old

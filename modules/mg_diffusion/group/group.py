@@ -17,10 +17,8 @@ class Group(DiscreteSystem):
         # Boolean flags
         self.is_nonlinear = mgd.is_nonlinear
         self.is_coupled = mgd.is_coupled
-        # Initialize vectors
-        self.rhs = np.zeros(self.field.n_dofs)
-        self.f_ell = np.zeros(self.field.n_dofs)
-        self.f_old = np.zeros(self.field.n_dofs)
+        # Initialize discrete system
+        DiscreteSystem.__init__(self, field, self.bcs)
 
     def lagged_operator_action(self, old=False):
         self.fission_and_scattering_source(old)

@@ -16,11 +16,7 @@ class Problem:
     # Solution vectors
     u = np.array([])
     u_ell = np.array([])
-    u_old = np.array([])
-    # Other parameters
-    tol = 1e-6
-    maxit = 100
-    verbosity = 0
+    u_old = np.array([])    
     
     def __init__(self, mesh, materials):
         self.mesh = mesh

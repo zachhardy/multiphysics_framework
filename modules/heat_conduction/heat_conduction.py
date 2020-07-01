@@ -23,9 +23,8 @@ class HeatConduction(PhysicsBase, DiscreteSystem):
         field = Field(self.name, problem, discretization, 1)
         self._register_field(field)
         self.field = self.fields[0]
-        # Initialize vectors
-        self.rhs = np.zeros(self.field.n_dofs)
-        self.f_old = np.zeros(self.field.n_dofs)
+        # Initialize discrete system
+        DiscreteSystem.__init__(self, field, bcs)
         # Determine nonlinearity
         for material in self.materials:
             if callable(material.k):
@@ -33,10 +32,10 @@ class HeatConduction(PhysicsBase, DiscreteSystem):
 
     def solve_system(self, time=None, dt=None, method=None, u_tmp=None):
         if not self.problem.is_transient:
-            self.assemble_physics()
-            self.assemble_forcing()
-            self.apply_bcs(vector=self.rhs)
-            self.field.u[:] = spsolve(self.A, self.rhs)
+            self.solve_steady_state()
+
+    def lagged_operator_action(self):
+        pass
 
     def assemble_physics(self):
         if self.is_nonlinear or self.A is None:
