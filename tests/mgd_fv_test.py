@@ -7,6 +7,7 @@ from problem import Problem
 from mesh.mesh import Mesh1D
 from bc import BC
 from discretizations.fv.fv import FV
+from discretizations.cfe.cfe import CFE
 from mg_diffusion.mg_diffusion import MultiGroupDiffusion
 from mg_diffusion.neutronics_material import NeutronicsMaterial
 
@@ -32,7 +33,8 @@ materials = [NeutronicsMaterial(material_id=0, **xs)]
 problem = Problem(mesh, materials)
 
 # Define physics
-bcs = [BC('reflective', 0), BC('vacuum', 1)]
+bcs = [BC('reflective', 0, np.zeros(n_grps)), 
+       BC('zero_flux', 1, np.zeros(n_grps))]
 ics = [
     lambda r: (r_b**2 - r**2)/r_b**2,
     lambda r: (r_b**2 - r**2)/r_b**2,
@@ -43,8 +45,8 @@ mgd = MultiGroupDiffusion(problem, fv, bcs, ics=ics, maxit=1000, tol=1e-10)
 
 # # Problem execution
 # problem.run_steady_state(verbosity=1, maxit=100)
-# problem.run_transient(verbosity=1, method='tbdf2')
-mgd.compute_k_eigenvalue(verbosity=1)
+problem.run_transient(verbosity=1, method='tbdf2')
+# mgd.compute_k_eigenvalue(verbosity=1)
 
 for group in mgd.groups:
     plt.plot(group.field.grid, group.field.u)
