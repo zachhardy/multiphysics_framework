@@ -8,9 +8,11 @@ sys.path.extend(['../framework', '../modules'])
 from problem import Problem
 from mesh.mesh import Mesh1D
 from bc import BC
+from discretizations.cfe.cfe import CFE
+from discretizations.fv.fv import FV
 from heat_conduction.hc_material import HeatConductionMaterial
-from heat_conduction.cfe_hc import CFE_HeatConduction
-from mg_diffusion.cfe_mg_diffusion import CFE_MultiGroupDiffusion
+from heat_conduction.heat_conduction import HeatConduction
+from mg_diffusion.mg_diffusion import MultiGroupDiffusion
 from mg_diffusion.neutronics_material import NeutronicsMaterial
 
 def k(T):
@@ -24,30 +26,26 @@ mesh = Mesh1D([0, 0.45], [50], [0], geom='slab')
 xs = {'D': [2], 'sig_r': [0.5], 'q': [10.]}
 materials = [NeutronicsMaterial(**xs)]
 # heat conduction
-props = {'k': k, 'q': 3e4}
-materials += [HeatConductionMaterial(**props)]
+hc_properties = {'k': k, 'q': 3e4}
+materials += [HeatConductionMaterial(**hc_properties)]
 
 ### Problem
 problem = Problem(mesh, materials)
 
 ### Physics
 # neutronics
-phi_bcs = [BC('robin', 0, [[0.5],[0]]), BC('robin', 1, [[0.5],[0]])]
-mgd = CFE_MultiGroupDiffusion(problem, 1, phi_bcs)
+phi_bcs = [BC('robin', 0, [0]), BC('robin', 1, [0])]
+cfe = CFE(mesh)
+mgd = MultiGroupDiffusion(problem, cfe, phi_bcs, maxit=1000, tol=1e-7)
 # conduction
 T_bcs = [BC('dirichlet', 0, 300), BC('dirichlet', 1, 300.)]
-hc = CFE_HeatConduction(problem, T_bcs)
+hc = HeatConduction(problem, cfe, T_bcs)
 
 ### Run
 problem.run_steady_state()
 
-plt.figure(0)
-plt.plot(hc.field.grid, hc.u)
-
-plt.figure(1)
-plt.plot(mgd.field.grid, mgd.u)
-
+for field in problem.fields:
+    plt.figure()
+    plt.plot(field.grid, field.u)
+    plt.title(field.name)
 plt.show()
-
-
-

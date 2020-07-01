@@ -2,7 +2,7 @@ import numpy as np
 from numpy.linalg import norm
 from scipy.sparse.linalg import spsolve
 
-from field import Field
+from physics.field import Field
 from .group.group import Group
 from physics.physics_base import PhysicsBase
 from .neutronics_material import NeutronicsMaterial
@@ -58,9 +58,9 @@ class MultiGroupDiffusion(PhysicsBase):
                 converged = True
                 break
         if converged:
-            print("*** Converged in {} iterations. ***".format(nit))
+            print("\n*** Converged in {} iterations. ***".format(nit))
         else:
-            print("*** WARNING: DID NOT CONVERGE. ***")
+            print("\n*** WARNING: DID NOT CONVERGE. ***")
 
     def compute_old_physics_action(self):
         for group in self.groups:
@@ -73,9 +73,7 @@ class MultiGroupDiffusion(PhysicsBase):
         return fission_source
 
     def compute_k_eigenvalue(self, tol=1e-8, maxit=100, verbosity=0):
-        # Prepare problem by setting to steady state, setting
-        # the inhomogeneous source to zero, and initializing a 
-        # an iteration vector.
+        # Zero out source and set to steady state
         self.problem.is_transient = False
         for material in self.materials:
             if hasattr(material, 'q'):
@@ -110,7 +108,6 @@ class MultiGroupDiffusion(PhysicsBase):
             if verbosity > 1:
                 self.print_k_iter_summary(nit, k_eff, k_error)
         self.print_k_calc_summary(converged, nit, k_eff, k_error)
-        
 
     def _validate_materials(self, materials):
         n_grps = materials[0].n_grps

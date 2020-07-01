@@ -2,8 +2,8 @@ import numpy as np
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import spsolve
 
-from field import Field
-from discrete_system import DiscreteSystem
+from physics.field import Field
+from physics.discrete_system import DiscreteSystem
 from physics.physics_base import PhysicsBase
 from .hc_material import HeatConductionMaterial
 

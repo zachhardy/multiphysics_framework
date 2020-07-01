@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.sparse import lil_matrix
-from discrete_system import DiscreteSystem
+from physics.discrete_system import DiscreteSystem
 
 class Group(DiscreteSystem):
 
