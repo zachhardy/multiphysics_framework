@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import spsolve
 
 class DiscreteSystem:
@@ -39,13 +40,13 @@ class DiscreteSystem:
         # Backward Euler
         elif method == 'bwd_euler':
             self.assemble_forcing(time+dt)
-            self.lagged_operator_action(True, f_ell)
+            self.lagged_operator_action()
             matrix = M/dt + A
             rhs += M/dt @ u_old - f_ell
         # Crank Nicholson
         elif method == 'cn':
             self.assemble_forcing(time+dt/2)
-            self.lagged_operator_action(True, f_ell)
+            self.lagged_operator_action()
             matrix = M/dt + A/2
             rhs += M/dt @ u_old - (f_ell + f_old)/2
         # BDF2
@@ -55,7 +56,7 @@ class DiscreteSystem:
                 )
             u_tmp = u_tmp[self.field.dofs]
             self.assemble_forcing(time+dt)
-            self.lagged_operator_action(True, f_ell)
+            self.lagged_operator_action()
             matrix = 1.5*M/dt + A
             rhs += 2*M/dt @ u_tmp - 0.5*M/dt @ u_old - f_ell
 
@@ -63,61 +64,16 @@ class DiscreteSystem:
         self.apply_bcs(matrix, rhs)
         self.field.u[:] = spsolve(matrix, rhs)
 
-    def assemble_physics(self):
-        if self.discretization.dtype == 'fv':
-            self.assemble_fv_physics()
-        elif self.discretization.dtype == 'cfe':
-            self.assemble_cfe_physics()
-
-    def assemble_mass(self):
-        if self.discretization.dtype == 'fv':
-            self.assemble_fv_mass()
-        elif self.discretization.dtype == 'cfe':
-            self.assemble_cfe_mass()
-
-    def assemble_forcing(self, time=0):
-        self.rhs[:] = 0
-        if self.discretization.dtype == 'fv':
-            self.assemble_fv_forcing(time)
-        elif self.discretization.dtype == 'cfe':
-            self.assemble_cfe_forcing(time)
-
-    def apply_bcs(self, matrix=None, vector=None):
-        if self.discretization.dtype == 'fv':
-            self.apply_fv_bcs(matrix, vector)
-        elif self.discretization.dtype == 'cfe':
-            self.apply_cfe_bcs(matrix, vector)
-
     def compute_old_physics_action(self):
         if self.A is None:
             self.assemble_physics()
         self.f_old += self.A @ self.field.u_old
 
-    def lagged_operator_action(self, ell, f):
+    def assemble_physics(self):
         raise NotImplementedError
 
-    def assemble_fv_physics(self):
+    def assemble_forcing(self, time=0):
         raise NotImplementedError
 
-    def assemble_cfe_physics(self):
+    def lagged_operator_action(self, f, old=False):
         raise NotImplementedError
-
-    def assemble_fv_mass(self):
-        raise NotImplementedError
-
-    def assemble_cfe_mass(self):
-        raise NotImplementedError
-
-    def assemble_fv_forcing(self, time):
-        raise NotImplementedError
-
-    def assemble_cfe_forcing(self, time):
-        raise NotImplementedError
-
-    def apply_fv_bcs(self, matrix=None, vector=None):
-        raise NotImplementedError
-
-    def apply_cfe_bcs(self, matrix=None, vector=None):
-        raise NotImplementedError
-
-    
