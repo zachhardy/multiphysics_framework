@@ -38,7 +38,6 @@ class PhysicsBase:
         field.dof_start = self.problem.n_dofs
         # Add the field to the problem, and update the
         # appropriate attributes.
-        self.problem.fields.append(field)
         self.problem.n_fields += 1
         self.problem.n_dofs += field.n_dofs
         self.problem.u.resize(self.problem.n_dofs)

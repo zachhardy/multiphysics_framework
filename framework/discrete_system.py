@@ -67,26 +67,26 @@ class DiscreteSystem:
         if self.discretization.dtype == 'fv':
             self.assemble_fv_physics()
         elif self.discretization.dtype == 'cfe':
-            pass
+            self.assemble_cfe_physics()
 
     def assemble_mass(self):
         if self.discretization.dtype == 'fv':
             self.assemble_fv_mass()
         elif self.discretization.dtype == 'cfe':
-            pass
+            self.assemble_cfe_mass()
 
     def assemble_forcing(self, time=0):
         self.rhs[:] = 0
         if self.discretization.dtype == 'fv':
             self.assemble_fv_forcing(time)
         elif self.discretization.dtype == 'cfe':
-            pass
+            self.assemble_cfe_forcing(time)
 
     def apply_bcs(self, matrix=None, vector=None):
         if self.discretization.dtype == 'fv':
             self.apply_fv_bcs(matrix, vector)
         elif self.discretization.dtype == 'cfe':
-            pass
+            self.apply_cfe_bcs(matrix, vector)
 
     def compute_old_physics_action(self):
         if self.A is None:
@@ -99,13 +99,25 @@ class DiscreteSystem:
     def assemble_fv_physics(self):
         raise NotImplementedError
 
+    def assemble_cfe_physics(self):
+        raise NotImplementedError
+
     def assemble_fv_mass(self):
         raise NotImplementedError
 
-    def assemble_fv_source(self, time):
+    def assemble_cfe_mass(self):
+        raise NotImplementedError
+
+    def assemble_fv_forcing(self, time):
+        raise NotImplementedError
+
+    def assemble_cfe_forcing(self, time):
         raise NotImplementedError
 
     def apply_fv_bcs(self, matrix=None, vector=None):
+        raise NotImplementedError
+
+    def apply_cfe_bcs(self, matrix=None, vector=None):
         raise NotImplementedError
 
     
