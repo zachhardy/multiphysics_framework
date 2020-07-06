@@ -79,7 +79,7 @@ class Group(DiscreteSystem):
 
     def assemble_mass(self):
         """ Assemble the velocity mass matrix. """
-         if self.is_nonlinear or self.M is None:
+        if self.is_nonlinear or self.M is None:
             sd = self.discretization
             self.M = lil_matrix(tuple([self.field.n_dofs]*2))
             for cell in self.mesh.cells:

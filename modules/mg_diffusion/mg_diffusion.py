@@ -83,6 +83,9 @@ class MultiGroupDiffusion(PhysicsBase):
             if self.problem.verbosity > 0:
                 print("\n*** WARNING: DID NOT CONVERGE. ***")
 
+    def compute_old_physics_action(self):
+        for group in self.groups:
+            group.compute_old_physics_action()
 
     def compute_fission_power(self):
         fission_source = 0
