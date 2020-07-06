@@ -15,8 +15,9 @@ class NeutronicsMaterial(MaterialBase):
     material_type = 'neutronics'
     
     def __init__(self, material_id=0, Na=1., sig_r=[], sig_t=[], 
-                 D=[], sig_s=[], nu_sig_f=[],
-                 chi=[], v=[], q=[]):
+                 D=[], sig_s=[], nu_sig_f=[], chi=[], v=[], 
+                 decay_const=[], beta=[], chi_d=[], 
+                 q=[], q_star=[]):
         super().__init__(material_id)
         # Group structure
         self.n_grps = len(sig_r)
@@ -53,7 +54,38 @@ class NeutronicsMaterial(MaterialBase):
         if v != []:
             assert len(v)==self.n_grps, "Invalid group structure."
             self.v = np.atleast_1d(v)
+        # Delayed neutron decay constants
+        if decay_const != []:
+            self.n_delayed = len(decay_const)
+            self.decay_const = np.atleast_1d(decay_const)
+            # Delayed neutron fractions
+            assert beta!=[], (
+                "beta must be provided is delayed neutrons are enabled."
+            )
+            assert len(beta)==self.n_grps, (
+                "Invalid number of delayed fractions."
+            )
+            self.beta = np.atleast_1d(beta)
+            self.beta_total = sum(self.beta)
+            # Delayed neutron spectrum
+            if self.n_grps == 1:
+                self.chi_d = np.ones(self.n_delayed)
+            else:
+                assert len(chi_d)==self.n_delayed, (
+                    "Delayed neutron spectra must be provided for "
+                    "multigroup calculations."
+                )
+                assert len(chi_d[0])==self.n_grps, (
+                    "Delayed neutron spectra have invalid group structure."
+                )
+                self.chi_d = np.atleast_2d(chi_d)
+        else:
+            self.n_delayed = 0
+            self.beta_total = 0
         # Source
         if q != []:
             assert len(q)==self.n_grps, "Invalid group structure."
             self.q = np.atleast_1d(q)
+        if q_star != []:
+            assert len(q_star)==self.n_delayed, "Invalid number of dnp groups."
+            self.q_star = np.atleast_1d(q_star)
