@@ -16,7 +16,9 @@ class Problem:
     # Solution vectors
     u = np.array([])
     u_ell = np.array([])
-    u_old = np.array([])    
+    u_old = np.array([])
+    # Booleans
+    is_transient = False  
     
     def __init__(self, mesh, materials):
         self.mesh = mesh
