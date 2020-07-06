@@ -27,16 +27,16 @@ class DiscreteSystem:
     def assemble_forcing(self, time=0):
         raise NotImplementedError
 
-    def lagged_operator_action(self):
+    def assemble_lagged_sources(self, old=False):
         raise NotImplementedError
 
-    def apply_bcs(self):
+    def apply_bcs(self, matrix=None, vector=None):
         raise NotImplementedError
 
     def solve_steady_state(self):
         self.assemble_physics()
         self.assemble_forcing()
-        self.lagged_operator_action()
+        self.assemble_lagged_sources()
         self.rhs -= self.f_ell
         self.apply_bcs(vector=self.rhs)
         self.field.u[:] = spsolve(self.A, self.rhs)
@@ -60,13 +60,13 @@ class DiscreteSystem:
         # Backward Euler
         elif method == 'bwd_euler':
             self.assemble_forcing(time+dt)
-            self.lagged_operator_action()
+            self.assemble_lagged_sources()
             matrix = M/dt + A
             rhs += M/dt @ u_old - f_ell
         # Crank Nicholson
         elif method == 'cn':
             self.assemble_forcing(time+dt/2)
-            self.lagged_operator_action()
+            self.assemble_lagged_sources()
             matrix = M/dt + A/2
             rhs += M/dt @ u_old - (f_ell + f_old)/2
         # BDF2
@@ -76,7 +76,7 @@ class DiscreteSystem:
                 )
             u_tmp = u_tmp[self.field.dofs]
             self.assemble_forcing(time+dt)
-            self.lagged_operator_action()
+            self.assemble_lagged_sources()
             matrix = 1.5*M/dt + A
             rhs += 2*M/dt @ u_tmp - 0.5*M/dt @ u_old - f_ell
 
@@ -88,12 +88,3 @@ class DiscreteSystem:
         if self.A is None:
             self.assemble_physics()
         self.f_old += self.A @ self.field.u_old
-
-    def assemble_physics(self):
-        raise NotImplementedError
-
-    def assemble_forcing(self, time=0):
-        raise NotImplementedError
-
-    def lagged_operator_action(self, f, old=False):
-        raise NotImplementedError
