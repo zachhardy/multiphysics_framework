@@ -6,6 +6,7 @@ from physics.field import Field
 from .group.group import Group
 from physics.physics_base import PhysicsBase
 from .neutronics_material import NeutronicsMaterial
+from .precursors import DelayedNeutronPrecursor as DNP
 
 valid_fv_bcs = ['reflective', 'marshak', 'vacuum',
                 'source', 'zero_flux']
@@ -18,6 +19,7 @@ class MultiGroupDiffusion(PhysicsBase):
     material_type = NeutronicsMaterial.material_type
     n_grps = 0
     groups = []
+    precursors = []
 
     def __init__(self, problem, discretization, bcs, ics=None,
                  tol=1e-8, maxit=100):
@@ -37,34 +39,50 @@ class MultiGroupDiffusion(PhysicsBase):
             field = Field(gname, problem, discretization, 1)
             self._register_field(field)
             self.groups.append(Group(self, field, g))
-        
+        # Initialize precursor objects
+        self.has_delayed = False
+        if sum([m.n_delayed for m in self.materials]) > 0:
+            self.has_delayed = True
+            self.precursors = []
+            for material in self.materials:
+                if material.n_delayed > 0:
+                    for i in range(material.n_delayed):
+                        pname = DNP.name + "_{}".format(i)
+                        field = Field(pname, problem, discretization, 1)
+                        self._register_field(field)
+                        self.precursors.append(DNP(self, field, i))
+
     def solve_system(self, time=None, dt=None, method=None, u_tmp=None):
         converged = False
         for nit in range(self.maxit):
             diff = 0
+            # Flux solves
             for group in self.groups:
-                group.assemble_physics()
-                # Handle steady state problem
                 if not self.problem.is_transient:
                     group.solve_steady_state()
-                # Handle time step of a transient
                 else:
-                    group.assemble_mass()
                     group.solve_time_step(time, dt, method, u_tmp)
-                # Compute the difference and reinit
                 diff += norm(group.field.u-group.field.u_ell, ord=2)
                 group.field.u_ell[:] = group.field.u
+            # Precursor solves
+            if self.has_delayed:
+                for precursor in self.precursors:
+                    if self.problem.is_transient:
+                        precursor.solve_time_step(time, dt, method, u_tmp)
+                    diff += norm(
+                        precursor.field.u-precursor.field.u_ell, ord=2
+                    )
+                    precursor.field.u_ell[:] = precursor.field.u
             if diff < self.tol:
                 converged = True
                 break
         if converged:
-            print("\n*** Converged in {} iterations. ***".format(nit))
+            if self.problem.verbosity > 0:
+                print("\n*** Converged in {} iterations. ***".format(nit))
         else:
-            print("\n*** WARNING: DID NOT CONVERGE. ***")
+            if self.problem.verbosity > 0:
+                print("\n*** WARNING: DID NOT CONVERGE. ***")
 
-    def compute_old_physics_action(self):
-        for group in self.groups:
-            group.compute_old_physics_action()
 
     def compute_fission_power(self):
         fission_source = 0
