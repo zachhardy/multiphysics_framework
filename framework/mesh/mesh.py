@@ -1,7 +1,3 @@
-""" 
-This module conatains classes that define mesh objects. 
-"""
-
 import numpy as np
 
 from .cell import Cell1D
@@ -11,15 +7,17 @@ geom_types = [
 ]
 
 class Mesh1D:
-    """ One-dimensional mesh. """
+
+    dim = 1
+
     def __init__(self, zone_edges, zone_subdivs,
                  material_zones=[0], geom='slab'):
-        self.dim = 1
         self.geom = geom
         self.zone_edges = zone_edges
         self.zone_subdivs = zone_subdivs
         self.material_zones = material_zones
         
+        # Counts of thigns
         self.n_zones = len(zone_subdivs)
         self.n_el = sum(zone_subdivs)
         self.n_faces = self.n_el + 1

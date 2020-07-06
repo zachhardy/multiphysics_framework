@@ -1,18 +1,12 @@
-"""
-This module contains class that define cell objects.
-"""
-
 import numpy as np
 from .face import Face1D
 
 class Cell1D:
-    """ One-dimensional cell. """
     
     dim = 1 
 
     def __init__(self, mesh, iel):
         self.geom = mesh.geom
-        # General information
         self.id = iel
         self.imat = mesh.iel2mat[iel]
         self.flags = mesh.iel2flags[iel]
@@ -33,7 +27,6 @@ class Cell1D:
         ]
         
     def GetCellVolume(self):
-        """ Compute the volume of the cell. """
         if self.geom == 'slab':
             return self.width[0]
         elif self.geom == 'cylinder':
@@ -48,7 +41,6 @@ class Cell1D:
             )
 
     def GetFaceAreas(self):
-        """ Compute the area of a face on the cell. """
         A = np.zeros(self.faces_per_cell)
         for iface in range(self.faces_per_cell):
             if self.geom == 'slab':

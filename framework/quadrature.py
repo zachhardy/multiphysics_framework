@@ -1,17 +1,6 @@
-#!/usr/bin/env python3
-
-import sys
 import numpy  as np
 
 class GLQuadrature:
-    """
-    Gauss-Legendre quadrature.
-    
-    Parameters
-    ----------
-    n_qpts: int, default=2
-        The number of quadrature points.
-    """
 
     def __init__(self, n_qpts=2):
         assert isinstance(n_qpts, int), "n_qpts must be int."

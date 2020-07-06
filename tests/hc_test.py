@@ -6,7 +6,8 @@ sys.path.extend(['../framework', '../modules'])
 from problem import Problem
 from mesh.mesh import Mesh1D
 from bc import BC
-from heat_conduction.cfe_hc import CFE_HeatConduction
+from discretizations.cfe.cfe import CFE
+from heat_conduction.heat_conduction import HeatConduction
 from heat_conduction.hc_material import HeatConductionMaterial
 
 def k(T):
@@ -28,12 +29,13 @@ materials = [HeatConductionMaterial(**props)]
 problem = Problem(mesh, materials)
 
 ### Physics
-bc_L = BC('neumann', 0, 0.)
-bc_R = BC('dirichlet', 1, 300.)
-bcs = [bc_L, bc_R]
-hc = CFE_HeatConduction(problem, bcs)
+bcs = [BC('neumann', 0, 0.), BC('dirichlet', 1, 300.)]
+cfe = CFE(mesh)
+hc = HeatConduction(problem, cfe, bcs)
 
+### Execute
 problem.run_steady_state(verbosity=2)
 
-plt.plot(hc.field.grid, hc.u)
+for field in problem.fields:
+    plt.plot(field.grid, field.u)
 plt.show()

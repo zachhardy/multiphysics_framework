@@ -1,9 +1,7 @@
-""" 
-This module contains classes that define face objects. 
-"""
-
 class Face1D:
-    """ One-dimensional face. """
+
+    dim = 1
+    
     def __init__(self, cell, iface):
         self.geom = cell.geom
         self.id = cell.id + iface

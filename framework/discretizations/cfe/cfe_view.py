@@ -1,14 +1,7 @@
-#!/usr/bin/env python3
-
 import numpy as np
 
 class CellCFEView1D:
-    """ Continuous finite element cell view.
 
-    Parameters
-    ----------
-    disctetization : CFE object.
-    """
     def __init__(self, discretization, cell):
         self.porder = discretization.porder
         self.geom = discretization.geom
@@ -41,39 +34,17 @@ class CellCFEView1D:
         self.qpoint_glob = self.get_global_qpoints()
         self.Jcoord = self.get_coord_sys_jacobian()
 
-        # shape function information
+        # Shape function information
         self._shape = discretization._shape
         self._grad_shape = discretization._grad_shape
         self.shape_values = self.get_shape_values()
         self.grad_shape_values = self.get_grad_shape_values()
 
     def cell_dof_map(self, local_id, component=0):
-        """ Map a local cell dof to a global dof.
-        
-        Parameters
-        ----------
-        local_id : int
-            The local dof index on the cell.
-        component : int, optional
-            The global component for the dof. Default is 0.
-        """
         assert local_id < self.nodes_per_cell, "Invalid local_id."
         return self.node_ids[local_id] + component*self.n_nodes
 
     def face_dof_map(self, face_id, component=0):
-        """ Get a face dof for a given component. 
-        
-        Parameters
-        ----------
-        face_id : int
-            The face number to get the dof from.
-        component : int, optional
-            The global component for the dof. Default is 0.
-        
-        Returns
-        -------
-        int, The mapped dof.
-        """
         assert face_id < 2, "Invalid face_id."
         if face_id == 0:
             return self.node_ids[0] + component*self.n_nodes
@@ -81,18 +52,7 @@ class CellCFEView1D:
             return self.node_ids[-1] + component*self.n_nodes
 
     def intV_shapeI_shapeJ(self, i, j, coef=None):
-        """ Integrate a reaction-like term over a cell volume.
-        
-        Parameters
-        ----------
-        i : int
-            Test function index.
-        j : int
-            Trial function index.
-        coef : numpy.ndarray (n_qpts,)
-            Coefficients at each quadrature point.
-        """
-        val = 0 # init integral result
+        val = 0
         coef = self.format_coef(coef)
         for qp in range(self.n_qpts):
             val += (
@@ -103,17 +63,6 @@ class CellCFEView1D:
         return val
 
     def intV_gradShapeI_gradShapeJ(self, i, j, coef=None):
-        """ Integrate a diffusion-like term over a cell volume.
-        
-        Parameters
-        ----------
-        i : int
-            Test function index.
-        j : int
-            Trial function index.
-        coef : numpy.ndarray (n_qpts,)
-            Coefficients at each quadrature point.
-        """
         val = 0
         coef = self.format_coef(coef)
         for qp in range(self.n_qpts):
@@ -125,15 +74,6 @@ class CellCFEView1D:
         return val
 
     def intV_shapeI(self, i, coef=None):
-        """ Integrate a source-like term over a cell volume.
-        
-        Parameters
-        ----------
-        i : int
-            Test function index.
-        coef : numpy.ndarray (n_qpts,)
-            Coefficients at each quadrature point.
-        """
         val = 0
         coef = self.format_coef(coef)
         for qp in range(self.n_qpts):
@@ -144,12 +84,6 @@ class CellCFEView1D:
         return val
 
     def quadrature_solution(self, u):
-        """ Get the solution at quadrature points.
-
-        Parameters
-        ----------
-        u : numpy.ndarray
-        """
         u_qp = np.zeros(self.n_qpts)
         for qp in range(self.n_qpts):
             u_qp[qp] = np.dot(
@@ -159,12 +93,6 @@ class CellCFEView1D:
         return u_qp
 
     def average_solution(self, u):
-        """ Get the average solution on this cell.
-
-        Parameters
-        ----------
-        u : numpy.ndarray
-        """
         u_avg = 0
         u_qp = self.quadrature_solution(u)
         for qp in range(self.n_qpts):
@@ -172,17 +100,6 @@ class CellCFEView1D:
         return u_avg / self.volume
 
     def format_coef(self, coef):
-        """ Format a coefficient for quadrature integration.
-
-        Parameters
-        ----------
-        coef : float, array-like, or None
-        
-        Returns
-        -------
-        numpy.ndarry (n_qpts,)
-            The formatted coefficients.
-        """
         if isinstance(coef, float):
             return coef * np.ones(self.n_qpts)
         elif coef is None:
@@ -193,11 +110,9 @@ class CellCFEView1D:
             return coef
 
     def get_global_qpoints(self):
-        """ Get the quadrature points in global coordinates. """
         return self.J * (self.qrule.qpoints + 1) + self.nodes[0]
 
     def get_coord_sys_jacobian(self):
-        """ Get the coordinate system jacobians. """
         Jcoord = np.zeros(self.n_qpts)
         for qp in range(self.n_qpts):
             if self.geom == 'slab':
@@ -209,7 +124,6 @@ class CellCFEView1D:
         return Jcoord
 
     def get_shape_values(self):
-        """ Compute phi at the quadrature points. """
         qpoints = self.qrule.qpoints
         shape_vals = np.zeros((self.n_qpts, self.porder+1))
         for qp in range(self.n_qpts):
@@ -218,7 +132,6 @@ class CellCFEView1D:
         return shape_vals
     
     def get_grad_shape_values(self):
-        """ Compute grad_phi at the quadrature points. """
         qpoints = self.qrule.qpoints
         grad_shape_vals = np.zeros((self.n_qpts, self.porder+1))
         for qp in range(self.n_qpts):
