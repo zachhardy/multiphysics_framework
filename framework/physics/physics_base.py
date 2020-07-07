@@ -72,6 +72,17 @@ class PhysicsBase:
         materials += [material]
     materials.sort(key=lambda x: x.material_id)
     return self._validate_materials(materials)
-  
+
   def _validate_materials(self, materials):
-    raise NotImplementedError
+    return materials
+
+  def _parse_sources(self, source_type):
+    sources = []
+    for source in self.problem.sources:
+      if source.source_type == source_type:
+        sources += [source]
+    sources.sort(key=lambda x: x.source_id)
+    return self._validate_sources(sources)
+
+  def _validate_sources(self, sources):
+    return sources

@@ -20,9 +20,10 @@ class Problem:
   # Booleans
   is_transient = False  
   
-  def __init__(self, mesh, materials):
+  def __init__(self, mesh, materials, sources):
     self.mesh = mesh
     self.materials = materials
+    self.sources = sources
     
   def run_steady_state(self, solver_type='os', tol=1e-6, 
                          maxit=100, verbosity=2):
