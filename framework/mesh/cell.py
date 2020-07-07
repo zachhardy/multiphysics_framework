@@ -9,6 +9,7 @@ class Cell1D:
     self.geom = mesh.geom
     self.id = iel
     self.imat = mesh.iel2mat[iel]
+    self.isrc = mesh.iel2src[iel]
     self.flags = mesh.iel2flags[iel]
     self.neighbors = mesh.iel2neighbors[iel]
     # Vertex information
@@ -17,16 +18,16 @@ class Cell1D:
     self.vertices = mesh.iel2vcoords[iel]
     # Geometric information
     self.width = self.vertices[1] - self.vertices[0]
-    self.volume = self.GetCellVolume()
+    self.volume = self.get_cell_volume()
     # Face information
     self.faces_per_cell = 2
-    self.face_areas = self.GetFaceAreas()
+    self.face_areas = self.get_face_areas()
     self.faces = [
       Face1D(self, 0), 
       Face1D(self, 1)
     ]
     
-  def GetCellVolume(self):
+  def get_cell_volume(self):
     if self.geom == 'slab':
       return self.width[0]
     elif self.geom == 'cylinder':
@@ -40,7 +41,7 @@ class Cell1D:
         - self.vertices[0][0]**3
       )
 
-  def GetFaceAreas(self):
+  def get_face_areas(self):
     A = np.zeros(self.faces_per_cell)
     for iface in range(self.faces_per_cell):
       if self.geom == 'slab':

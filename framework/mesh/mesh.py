@@ -11,17 +11,27 @@ class Mesh1D:
   dim = 1
 
   def __init__(self, zone_edges, zone_subdivs,
-                 material_zones=[0], geom='slab'):
+                 material_zones=[0], source_zones=[0],
+                 geom='slab'):
     self.geom = geom
     self.zone_edges = zone_edges
     self.zone_subdivs = zone_subdivs
     self.material_zones = material_zones
+    self.source_zones = source_zones
     
-    # Counts of thigns
+    # Counts of things
     self.n_zones = len(zone_subdivs)
     self.n_el = sum(zone_subdivs)
     self.n_faces = self.n_el + 1
     self.n_vertices = self.n_faces
+
+    # Checks
+    if len(material_zones) != self.n_zones:
+      msg = "There must be n_zones material zones"
+      raise ValueError(msg)
+    if len(source_zones) != self.n_zones:
+      msg = "There must be n_zones source zones"
+      raise ValueError(msg)
 
     # Create a list of the element edge coordinates.
     vcoords = np.linspace(
@@ -59,10 +69,12 @@ class Mesh1D:
     self.iel2flags = iel2flags
 
     # Define element-wise material ids.
-    iel2mat = []
+    iel2mat, iel2src = [], []
     for izn in range(self.n_zones):
         iel2mat += [material_zones[izn]] * zone_subdivs[izn]
+        iel2src += [source_zones[izn]] * zone_subdivs[izn]
     self.iel2mat = iel2mat
+    self.iel2src = iel2src
 
     # Generate the cells, faces, and bndry faces.
     cells, faces = [], []
