@@ -34,7 +34,6 @@ class DiscreteSystem:
   def solve_steady_state(self):
     self.assemble_physics()
     self.assemble_forcing()
-    self.assemble_lagged_sources()
     self.rhs -= self.f_ell
     self.apply_bcs(vector=self.rhs)
     return spsolve(self.A, self.rhs)
@@ -53,19 +52,19 @@ class DiscreteSystem:
       self.assemble_forcing(time)
       matrix = M/dt
       rhs += M/dt @ u_old - f_old
-      
+
     # Backward Euler
     elif method == 'bwd_euler':
       self.assemble_forcing(time+dt)
-      self.assemble_lagged_sources()
       matrix = M/dt + A
       rhs += M/dt @ u_old - f_ell
+
     # Crank Nicholson
     elif method == 'cn':
       self.assemble_forcing(time+dt/2)
-      self.assemble_lagged_sources()
       matrix = M/dt + A/2
       rhs += M/dt @ u_old - (f_ell + f_old)/2
+      
     # BDF2
     elif method == 'bdf2':
       assert isinstance(args[0], np.ndarray), (
@@ -76,15 +75,9 @@ class DiscreteSystem:
         "u_half is not the"
       )
       self.assemble_forcing(time+dt)
-      self.assemble_lagged_sources()
       matrix = 1.5*M/dt + A
       rhs += 2*M/dt @ args[0] - 0.5*M/dt @ u_old - f_ell
 
     # Apply boundary conditions and solve
     self.apply_bcs(matrix, rhs)
     return spsolve(matrix, rhs)
-
-  def compute_old_physics_action(self, u_old):
-    if self.A is None:
-      self.assemble_physics()
-    self.f_old += self.A @ u_old
