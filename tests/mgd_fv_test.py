@@ -8,7 +8,7 @@ from mesh.mesh import Mesh1D
 from bc import BC
 from discretizations.fv.fv import FV
 from discretizations.cfe.cfe import CFE
-from mg_diffusion.mg_diffusion import MultiGroupDiffusion
+from mg_diffusion.mg_diffusion_base import MultiGroupDiffusion
 from mg_diffusion.neutronics_material import NeutronicsMaterial
 
 # Parameters
@@ -18,7 +18,7 @@ geom = 'sphere'
 n_grps = 3
 xs = {
   'Na': 0.05, 'v': [2000, 100, 2.2],
-  'chi': [1, 0, 0], 'sig_t': [7.71, 50, 25.6],
+  'chi_p': [1, 0, 0], 'sig_t': [7.71, 50, 25.6],
   'nu_sig_f': [5.4, 60.8, 28], 
   'sig_r': [3.31, 36.2, 13.6],
   'sig_s': [[0, 1.46, 0],
@@ -41,14 +41,19 @@ ics = [
     lambda r: 0
 ]
 fv = FV(mesh)
-mgd = MultiGroupDiffusion(problem, fv, bcs, ics=ics, maxit=1000, tol=1e-10)
+mgd = MultiGroupDiffusion(problem, fv, bcs, ics=ics, opt='full')
 
 # # Problem execution
 # problem.run_steady_state(verbosity=1, maxit=100)
-problem.run_transient(verbosity=1, method='tbdf2')
-# mgd.compute_k_eigenvalue(verbosity=1)
+# problem.run_transient(verbosity=1, method='tbdf2', tend=0.1)
+mgd.compute_k_eigenvalue(verbosity=2)
 
+
+
+plt.figure()
 for group in mgd.groups:
     plt.plot(group.field.grid, group.field.u)
+# plt.figure()
+# plt.plot(mgd.grid, mgd.fission_rate)
 plt.show()
 

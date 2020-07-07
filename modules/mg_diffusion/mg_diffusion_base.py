@@ -7,7 +7,7 @@ from scipy.sparse.linalg import spsolve
 from physics.field import Field
 from physics.physics_base import PhysicsBase
 from .neutronics_material import NeutronicsMaterial
-from .group.group import Group
+from .group import Group
 # from .precursors import DelayedNeutronPrecursor as DNP
 
 valid_fv_bcs = ['reflective', 'marshak', 'vacuum',

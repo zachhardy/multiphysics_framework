@@ -92,16 +92,25 @@ class MultiGroupDiffusionFull(DiscreteSystem, MultiGroupDiffusionBase):
     L = self.assemble_transport_operator()
     Q = self.assemble_source_operator()
     self.u_ell[:] = 1
-    k_eff_old = 1
+    k_eff_ell = 1
 
     # Inverse power iteration
     converged = False
     for nit in range(maxit):
-      self.u[:] = spsolve(L, Q @ self.u_ell)
+      # Form right hand side, apply cfe boundary values.
+      # Note that this is simply to apply dirichlet bcs.
+      rhs = Q @ self.u_ell
+      if self.discretization.dtype == 'cfe':
+        self.apply_bcs(vector=rhs)
+      # Solve the system
+      self.u[:] = spsolve(L, rhs)
+      # Recompute k-eff
       k_eff = self.compute_fission_power()
+      # Compute change and reset prev iteration params
+      k_error = np.abs(k_eff-k_eff_ell) / np.abs(k_eff)
+      k_eff_ell = k_eff
       self.u_ell[:] = self.u / k_eff
-      k_error = np.abs(k_eff-k_eff_old) / np.abs(k_eff)
-      k_eff_old = k_eff
+      # Check convergence
       if k_error < tol:
         converged = True
         break
