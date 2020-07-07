@@ -9,6 +9,7 @@ from bc import BC
 from discretizations.cfe.cfe import CFE
 from heat_conduction.heat_conduction import HeatConduction
 from heat_conduction.hc_material import HeatConductionMaterial
+from heat_conduction.hc_source import HeatConductionSource
 
 def k(T):
     return 1.5 + (2510 / (215 + T))
@@ -22,11 +23,13 @@ mesh = Mesh1D([0., r_b], [n_cells], [0], geom='slab')
 
 ### Materials
 # properties
-props = {'k': k, 'q': 3e4}
+props = {'k': k}
+src = {'q': 3e4}
 materials = [HeatConductionMaterial(**props)]
+sources = [HeatConductionSource(**src)]
 
 ### Problem
-problem = Problem(mesh, materials)
+problem = Problem(mesh, materials, sources)
 
 ### Physics
 bcs = [BC('neumann', 0, 0.), BC('dirichlet', 1, 300.)]
