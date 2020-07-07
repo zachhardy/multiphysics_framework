@@ -11,7 +11,7 @@ class MultiGroupDiffusionGroupWise(MultiGroupDiffusionBase):
     self.tol = tol
     self.maxit = maxit
 
-  def solve_system(self, method, time, dt, *args):
+  def solve_system(self, method=None, time=None, dt=None, *args):
     converged = False
     for nit in range(self.maxit):  
       diff = 0

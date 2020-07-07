@@ -9,6 +9,7 @@ class Group(DiscreteSystem):
     self.field = field
     self.mesh = mgd.mesh
     self.materials = mgd.materials
+    self.sources = mgd.sources
     self.discretization = field.discretization
     self.bcs = mgd.bcs
     self.ics = mgd.ics
@@ -154,11 +155,10 @@ class Group(DiscreteSystem):
     sd = self.discretization
     for cell in self.mesh.cells:
       view = sd.cell_views[cell.id]
-      material = self.materials[cell.imat]
-      if hasattr(material, 'q'):
-        q = material.q[self.group_num]
-        q = q(time) if callable(q) else q
-        if q != 0:
+      source = self.sources[cell.isrc]
+      q = source.q[self.group_num]
+      q = q(time) if callable(q) else q
+      if q != 0:
           
           ### Finite volume assembly
           if sd.dtype == 'fv':

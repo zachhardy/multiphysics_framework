@@ -7,8 +7,8 @@ from scipy.sparse.linalg import spsolve
 from physics.field import Field
 from physics.physics_base import PhysicsBase
 from .neutronics_material import NeutronicsMaterial
+from .neutronics_source import NeutronicsSource
 from .group import Group
-# from .precursors import DelayedNeutronPrecursor as DNP
 
 valid_fv_bcs = ['reflective', 'marshak', 'vacuum',
                 'source', 'zero_flux']
@@ -31,13 +31,14 @@ class MultiGroupDiffusionBase(PhysicsBase):
 
   name = 'scalar_flux'
   material_type = NeutronicsMaterial.material_type
+  source_type = NeutronicsSource.source_type
   n_grps = 0
-  groups = []
-  precursors = []
 
   def __init__(self, problem, discretization, bcs, ics=None):
     super().__init__(problem)
     self.materials = self._parse_materials(self.material_type)
+    self.sources = self._parse_sources(self.source_type)
+    self._validate_materials_and_sources()
     self.discretization = discretization
     self.bcs = self._validate_bcs(bcs)
     self.ics = self._validate_ics(ics)
@@ -51,6 +52,11 @@ class MultiGroupDiffusionBase(PhysicsBase):
       self._register_field(field)
       self.groups.append(Group(self, field, g))
 
+    # # Initialize precursor objects
+    # self.precursors = []
+    # for material in self.materials:
+    #   if material.n_precursors > 0:
+        
   def compute_fission_rate(self):
     self.fission_rate[:] = 0
     for group in self.groups:
@@ -70,6 +76,19 @@ class MultiGroupDiffusionBase(PhysicsBase):
           "All materials must have the same group structure."
         )
     return materials
+
+  def _validate_sources(self, sources):
+    n_grps = sources[0].n_grps
+    if len(sources) > 1:
+      for source in sources[1:]:
+        assert source.n_grps==n_grps, (
+          "All sources must have the same group structure."
+        )
+    return sources
+
+  def _validate_materials_and_sources(self):
+    if self.materials[0].n_grps != self.sources[0].n_grps:
+      raise ValueError("Incompatible group structures.")
 
   def _validate_bcs(self, bcs):
     for bc in bcs:

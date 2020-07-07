@@ -16,8 +16,7 @@ class NeutronicsMaterial(MaterialBase):
   
   def __init__(self, material_id=0, Na=1., sig_r=[], sig_t=[], 
                  D=[], sig_s=[], nu_sig_f=[], chi_p=[], v=[], 
-                 decay_const=[], beta=[], chi_d=[], 
-                 q=[], q_precursor=[]):
+                 decay_const=[], beta=[], chi_d=[]):
     super().__init__(material_id)
     # Group structure
     self.n_grps = len(sig_r)
@@ -83,10 +82,3 @@ class NeutronicsMaterial(MaterialBase):
     else:
       self.n_precursors = 0
       self.beta_total = 0
-    # Source
-    if q != []:
-      assert len(q)==self.n_grps, "Invalid group structure."
-      self.q = np.atleast_1d(q)
-    if q_precursor != []:
-      assert len(q_precursor)==self.n_delayed, "Invalid number of dnp groups."
-      self.q_precursor = np.atleast_1d(q_precursor)

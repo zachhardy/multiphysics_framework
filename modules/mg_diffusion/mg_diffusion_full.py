@@ -14,7 +14,7 @@ class MultiGroupDiffusionFull(DiscreteSystem, MultiGroupDiffusionBase):
     )
     DiscreteSystem.__init__(self, self.n_dofs, self.bcs)
 
-  def solve_system(self, method, time, dt, *args):
+  def solve_system(self, method=None, time=None, dt=None, *args):
     if not self.problem.is_transient:
       self.u[:] = self.solve_steady_state()
     else:
