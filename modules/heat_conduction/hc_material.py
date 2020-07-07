@@ -22,7 +22,7 @@ class HeatConductionMaterial(MaterialBase):
 
   material_type = 'hc'
 
-  def __init__(self, material_id=0, k=[], C_v=[], q=[]):
+  def __init__(self, material_id=0, k=[], C_v=[]):
     super().__init__(material_id)
     
     # Conductivity
@@ -32,7 +32,4 @@ class HeatConductionMaterial(MaterialBase):
     # Specific heat
     if C_v != []:
       self.C_v = C_v
-    
-    # Source
-    if q != []:
-      self.q = q
+

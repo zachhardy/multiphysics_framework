@@ -6,25 +6,27 @@ from physics.field import Field
 from physics.discrete_system import DiscreteSystem
 from physics.physics_base import PhysicsBase
 from .hc_material import HeatConductionMaterial
+from .hc_source import HeatConductionSource
 
 valid_bcs = ['neumann', 'robin', 'dirichlet']
 
-class HeatConduction(PhysicsBase, DiscreteSystem):
+class HeatConduction(DiscreteSystem, PhysicsBase):
 
   name = 'temperature'
   material_type = HeatConductionMaterial.material_type
+  source_type = HeatConductionSource.source_type
 
   def __init__(self, problem, discretization, bcs, ics=None):
-    super().__init__(problem)
+    PhysicsBase.__init__(self, problem)
     self.materials = self._parse_materials(self.material_type)
+    self.sources = self._parse_sources(self.source_type)
     self.bcs = self._validate_bcs(bcs)
     self.ics = self._validate_ics(ics)
     # Initialize and register the field with problem.
     field = Field(self.name, problem, discretization, 1)
     self._register_field(field)
-    self.field = self.fields[0]
     # Initialize discrete system
-    DiscreteSystem.__init__(self, field, bcs)
+    DiscreteSystem.__init__(self, self.n_dofs, bcs)
     # Determine nonlinearity
     for material in self.materials:
       if callable(material.k):
@@ -32,21 +34,18 @@ class HeatConduction(PhysicsBase, DiscreteSystem):
 
   def solve_system(self, time=None, dt=None, method=None, u_tmp=None):
     if not self.problem.is_transient:
-      self.solve_steady_state()
-
-  def lagged_operator_action(self):
-    pass
+      self.u[:] = self.solve_steady_state()
 
   def assemble_physics(self):
     if self.is_nonlinear or self.A is None:
       sd = self.discretization
-      self.A = lil_matrix(tuple([self.field.n_dofs]*2))
+      self.A = lil_matrix(tuple([self.n_dofs]*2))
       for cell in self.mesh.cells:
         view = sd.cell_views[cell.id]
         material = self.materials[cell.imat]
         k = material.k
         if callable(k):
-          T = view.quadrature_solution(self.field.u)
+          T = view.quadrature_solution(self.u)
           k = k(T)
 
         ### Finite element
@@ -67,17 +66,16 @@ class HeatConduction(PhysicsBase, DiscreteSystem):
     sd = self.discretization
     for cell in self.mesh.cells:
       view = self.discretization.cell_views[cell.id]
-      material = self.materials[cell.imat]
-      if hasattr(material, 'q'):
-        q = material.q
-        q = q(time) if callable(q) else q
-        if q != 0:
-          
-          ### Finite element
-          if sd.dtype == 'cfe':
-            for i in range(sd.porder+1):
-              row = view.cell_dof_map(i)
-              self.rhs[row] += view.intV_shapeI(i, q)
+      source = self.sources[cell.isrc]
+      q = source.q
+      q = q(time) if callable(q) else q
+      if q != 0:
+        
+        ### Finite element
+        if sd.dtype == 'cfe':
+          for i in range(sd.porder+1):
+            row = view.cell_dof_map(i)
+            self.rhs[row] += view.intV_shapeI(i, q)
   
   def apply_bcs(self, matrix=None, vector=None):
     # --- Input checks
@@ -94,13 +92,16 @@ class HeatConduction(PhysicsBase, DiscreteSystem):
 
           if sd.dtype == 'cfe':
             row = view.face_dof_map(iface)
+
             if bc.boundary_kind == 'neumann':
               if vector is not None:
                 vector[row] += face.area * bc.vals
+
             elif bc.boundary_kind == 'robin':
               msg = "Robin bcs for heat conduction have not "
               msg += "been implemented."
               raise NotImplementedError(msg)
+
             elif bc.boundary_kind == 'dirichlet':
               if matrix is not None:
                 matrix[row,row] = 1.0
@@ -109,9 +110,6 @@ class HeatConduction(PhysicsBase, DiscreteSystem):
                     matrix[row,col] = 0.0
               if vector is not None:
                 vector[row] = bc.vals
-
-  def _validate_materials(self, materials):
-    return materials
 
   def _validate_bcs(self, bcs):
     for bc in bcs:
