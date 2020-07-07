@@ -29,7 +29,7 @@ class PhysicsBase:
     self.discretization = field.discretization
     self.grid = self.discretization.grid
     self.n_nodes = self.discretization.n_nodes
-    self.n_dofs = field.n_dofs
+    self.n_dofs += field.n_dofs
     # Set the beginning of the field dof range.
     field.dof_start = self.problem.n_dofs
     # Add the field to the problem, and update the
