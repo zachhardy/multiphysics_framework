@@ -43,50 +43,54 @@ class Problem:
     self.is_transient = True
     self.tol = tol
     self.maxit = maxit
-    # Initialize time stepping parameters.
-    time = t0
-    dt = dt
+    # Initialize time stepping parameters
+    self.method = method
+    self.time = t0
+    self.dt = dt
     step = 0
-    # Create additional storage for mulit-step methods.
+    # Create additional storage for mulit-step methods
     if method == 'tbdf2':
-      u_tmp = np.copy(self.u)
+      self.u_half = np.copy(self.u)
 
-    # Initialize a solver and start time stepping.
+    # Initialize a solver and start time stepping
     self.evauluate_ics()
     self.solver = OperatorSplitting(self)
-    while time < tend:
+    while self.time < tend:
       step += 1
       if self.verbosity > 0:
         msg = "* Time Step {} *".format(step)
         msg = "\n".join(["\n", "*"*len(msg), msg, "*"*len(msg)])
-        msg += "\ntime:\t{:.5f} micro-sec".format(time+dt)
+        msg += "\ntime:\t{:.5f} micro-sec".format(self.time+self.dt)
         msg += "\ndt:\t{:.5f} micro-sec".format(dt)
         msg += "\n"+"="*25
         print(msg)
 
       # Compute old physics action
-      self.compute_old_physics_action()
+      self.assemble_old_physics_action()
 
       # Handle single step methods.
       if method != 'tbdf2':
-        self.solver.solve_system(method, time, dt)
+        self.solver.solve_system()
 
       # Handle multi-step methods. Currently, the only multi-step
-      # method available is TBDF2.
+      # method available is TBDF2
       else:
-        # Take a half step with Crank Nicholson.
-        self.solver.solve_system('cn', time, dt/2)
-        # Store the result for use in BDF2.
-        u_tmp[:] = self.u 
-        # Take another half step with BDF2.
-        self.solver.solve_system('bdf2', time+dt/2, dt/2, u_tmp)
+        # Take a half step with Crank Nicholson
+        self.solver.solve_system(opt=0)
+        # Store the result for use in BDF2
+        self.u_half[:] = self.u 
+        # Take another half step with BDF2
+        self.solver.solve_system(opt=1)
 
-      time += dt
+      self.time += self.dt
       # If the next time step pushes time beyond tend, change the
       # time step to ensure the simulaltion ends at tend.
-      if time + dt > tend:
-        dt = tend - time
+      if self.time + self.dt > tend:
+        dt_ = self.dt
+        self.dt = tend - self.time
       self.u_old[:] = self.u
+
+    self.dt = dt_
 
   def evauluate_ics(self):
     for physic in self.physics:
@@ -105,8 +109,8 @@ class Problem:
     self.u_ell = np.copy(self.u)
     self.u_old = np.copy(self.u)
 
-  def compute_old_physics_action(self):
+  def assemble_old_physics_action(self):
     for physic in self.physics:
-      physic.compute_old_physics_action()
+      physic.assemble_old_physics_action()
 
     

@@ -25,11 +25,6 @@ class PhysicsBase:
     # Add the field to the field stack.
     self.problem.fields.append(field)
     self.fields.append(field)
-    # Add the discretization to the physics
-    self.discretization = field.discretization
-    self.grid = self.discretization.grid
-    self.n_nodes = self.discretization.n_nodes
-    self.n_dofs += field.n_dofs
     # Set the beginning of the field dof range.
     field.dof_start = self.problem.n_dofs
     # Add the field to the problem, and update the
@@ -38,6 +33,8 @@ class PhysicsBase:
     self.problem.n_dofs += field.n_dofs
     self.problem.u.resize(self.problem.n_dofs)
     self.problem.u_ell.resize(self.problem.n_dofs)
+    # Increment the dofs
+    self.n_dofs +=  field.n_dofs
     # Set the end of the field dof range.
     field.dof_end = self.problem.n_dofs
 
@@ -54,12 +51,16 @@ class PhysicsBase:
     return self.problem.u_old[self.dofs[0]:self.dofs[-1]+1]
 
   @property
+  def u_half(self):
+    return self.problem.u_half[self.dofs[0]:self.dofs[-1]+1]
+
+  @property
   def dofs(self):
     start = min([field.dof_start for field in self.fields])
     end = max([field.dof_end for field in self.fields])
     return list(range(start, end))
 
-  def compute_old_physics_action(self):
+  def assemble_old_physics_action(self):
     raise NotImplementedError
 
   def solve_system(self):
