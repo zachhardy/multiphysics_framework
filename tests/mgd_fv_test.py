@@ -15,7 +15,7 @@ from mg_diffusion.mg_diffusion_base import MultiGroupDiffusion
 
 # Parameters
 r_b = 6.0
-n_cells = [50]
+n_cells = [20]
 geom = 'sphere'
 n_grps = 3
 xs = {
@@ -45,15 +45,15 @@ ics = [
     lambda r: 0
 ]
 fv = FV(mesh)
-mgd = MultiGroupDiffusion(problem, fv, bcs, ics=ics, opt='full')
+mgd = MultiGroupDiffusion(problem, fv, bcs, ics=ics, solve_opt='gw')
 
 # # Problem execution
 # problem.run_steady_state(verbosity=1, maxit=100)
-problem.run_transient(verbosity=1, method='tbdf2', tend=1e-1)
+problem.run_transient(verbosity=1, method='cn', dt=1e-3, tend=0.1)
 # mgd.compute_k_eigenvalue(verbosity=1)
 
-
 plt.figure()
-for group in mgd.groups:
-    plt.plot(group.field.grid, group.field.u)
+for field in problem.fields:
+    plt.plot(field.grid, field.u, label=field.name)
+plt.legend()
 plt.show()
