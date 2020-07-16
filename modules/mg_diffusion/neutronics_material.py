@@ -16,7 +16,7 @@ class NeutronicsMaterial(MaterialBase):
   
   def __init__(self, material_id=0, Na=1., sig_r=[], sig_t=[], 
                  D=[], sig_s=[], nu_sig_f=[], chi_p=[], v=[], 
-                 decay_const=[], beta=[], chi_d=[]):
+                 decay_const=[], beta=[], chi_d=[], q_prec=[]):
     super().__init__(material_id)
     # Group structure
     self.n_grps = len(sig_r)
@@ -69,16 +69,22 @@ class NeutronicsMaterial(MaterialBase):
       self.beta_total = sum(self.beta)
       # Delayed neutron spectrum
       if self.n_grps == 1:
-        self.chi_d = np.ones(self.n_delayed)
+        self.chi_d = np.ones((self.n_precursors, 1))
       else:
-        assert len(chi_d)==self.n_delayed, (
+        assert len(chi_d)==self.n_precursors, (
           "Delayed neutron spectra must be provided for "
-          "multigroup calculations."
+          "each dnp group for multigroup calculations."
         )
         assert len(chi_d[0])==self.n_grps, (
           "Delayed neutron spectra have invalid group structure."
         )
         self.chi_d = np.atleast_2d(chi_d)
+      if q_prec != []:
+        assert len(q_prec)==self.n_precursors, (
+          "Artificial precursor source does not agree with the "
+          "number of precursors provided."
+        )
+        self.q_prec = np.atleast_1d(q_prec)
     else:
       self.n_precursors = 0
       self.beta_total = 0

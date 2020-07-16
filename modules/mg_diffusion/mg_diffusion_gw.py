@@ -1,36 +1,32 @@
+import sys
 import numpy as np
 import numpy.linalg as npla
+from scipy.sparse.linalg import spsolve
 
 from .mg_diffusion_base import MultiGroupDiffusionBase
 
 class MultiGroupDiffusionGroupWise(MultiGroupDiffusionBase):
 
-  def __init__(self, problem, discretization, bcs, ics=None,
-               tol=1e-8, maxit=500):
-    super().__init__(problem, discretization, bcs, ics)
-    self.tol = tol
-    self.maxit = maxit
+  def __init__(self, problem, discretization, bcs, ics=None, **kwargs):
+    super().__init__(problem, discretization, bcs, ics, **kwargs)
+    self.tol = kwargs['tol'] if 'tol' in kwargs else 1e-8
+    self.maxit = kwargs['maxit'] if 'maxit' in kwargs else 500
 
-  def solve_system(self, method=None, time=None, dt=None, *args):
+  def solve_system(self, opt=0):
     converged = False
-    for nit in range(self.maxit):  
+    for nit in range(self.maxit):        
       diff = 0
+      if not self.problem.is_transient:
+        self.solve_steady_state()
+      else:
+        self.solve_time_step(opt)
+
       for group in self.groups:
-        if method != 'fwd_euler':
-          self.assemble_lagged_sources(group)
-
-        # Solve the group
-        if not self.problem.is_transient:
-          group.u[:] = group.solve_steady_state()
-        else:
-          u_tmp = None if args==() else args[0][group.field.dofs]
-          group.u[:] = group.solve_time_step(
-            method, time, dt, group.u_old, u_tmp
-          )
-
-        # Compute the change in solution and reset
         diff += npla.norm(group.u-group.u_ell, ord=2)
         group.u_ell[:] = group.u
+      for precursor in self.precursors:
+        diff += npla.norm(precursor.u-precursor.u_ell, ord=2)
+        precursor.u_ell[:] = precursor.u
 
       # Check convergence
       if diff < self.tol:
@@ -40,45 +36,74 @@ class MultiGroupDiffusionGroupWise(MultiGroupDiffusionBase):
     # Iteration summary
     if converged:
       if self.problem.verbosity > 0:
-        print("\n*** Converged in {} iterations. ***".format(nit))
+        print("\n*** Diffusion Solver Converged ***")
+        print("Iterations: {}".format(nit))
+        print("Final Error: {:.3e}".format(diff))
     else:
       if self.problem.verbosity > 0:
         print("\n*** WARNING: DID NOT CONVERGE. ***")
 
-  def assemble_lagged_sources(self, group, old=False):
-    f = group.f_old if old else group.f_ell
-    f[:] = 0
-    for group_ in self.groups:
-      u_gprime = group_.u_old if old else group_.u_ell
-      group.assemble_fission_source(group_, u_gprime, f)
-      group.assemble_scattering_source(group_, u_gprime, f)
-  
-  def compute_old_physics_action(self):
+  def solve_steady_state(self):
     for group in self.groups:
-      self.assemble_lagged_sources(group, old=True)
-      group.f_old += group.compute_old_physics_action()
-      
+      self.assemble_group_system(group)
+      group.assemble_forcing()
+      group.b += group.f
+      group.u[:] = spsolve(group.A, group.b)
+    
+  def solve_time_step(self, opt=0):
+    for group in self.groups:
+      self.assemble_group_system(group, opt)
+      group.u[:] = group.solve_time_step(opt)
+    if self.use_precursors:
+      self.compute_fission_rate()
+      for precursor in self.precursors:
+        if not self.sub_precursors:
+          self.assemble_precursor_system(precursor, opt)
+          precursor.u[:] = precursor.solve_time_step(opt)
+        else:
+          precursor.update_precursor(opt)
+  
+  def assemble_group_system(self, group, opt=0):
+    group.f[:] = 0
+    group.assemble_cross_group_rhs(old=False)
+    if self.use_precursors:
+      if not self.sub_precursors:
+        group.assemble_precursor_rhs(old=False)
+      elif self.sub_precursors:
+        group.assemble_gw_substitution_rhs(opt)
+
+  def assemble_precursor_system(self, precursor, opt=0):
+    precursor.f[:] = 0
+    precursor.assemble_production_rhs(old=False)
+
+  def assemble_old_physics_action(self):
+    self.compute_fission_rate(old=True)
+    for group in self.groups:
+      group.f_old = -group.A @ group.u_old
+      group.assemble_cross_group_rhs(old=True)
+      if self.use_precursors:
+        group.assemble_precursor_rhs(old=True)
+    if self.use_precursors: 
+      if not self.sub_precursors:
+        for precursor in self.precursors:
+          precursor.f_old[:] = -precursor.A @ precursor.u_old
+          precursor.assemble_production_rhs(old=True)
+    
   def compute_k_eigenvalue(self, tol=1e-8, maxit=100, verbosity=0):
     # Zero out source and set to steady state
     self.problem.is_transient = False
-    for material in self.materials:
-      if hasattr(material, 'q'):
-        material.q = np.zeros(self.n_grps)
+    for source in self.sources:
+      source.q = np.zeros(self.n_grps)
 
     # Initialize initial guesses and operators
     for group in self.groups:
-      group.assemble_physics()
       group.u_ell[:] = 1
     k_eff_old = 1
     
     # Inverse power iterations
     converged = False
     for nit in range(maxit):
-      # Solve group-wise
-      for group in self.groups:
-        self.assemble_lagged_sources(group)
-        group.u[:] = group.solve_steady_state()
-      
+      self.solve_steady_state()  
       k_eff = self.compute_fission_power()
   
       # Reinit and normalize group fluxes

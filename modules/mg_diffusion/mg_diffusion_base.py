@@ -1,14 +1,17 @@
+import sys
 import numpy as np
 import numpy.linalg as npla
 from scipy.sparse import lil_matrix
 from scipy.sparse import bmat
 from scipy.sparse.linalg import spsolve
 
-from physics.field import Field
+from physics.field import Field, AuxField
+from discretizations.fv.fv import FV
 from physics.physics_base import PhysicsBase
 from .neutronics_material import NeutronicsMaterial
 from .neutronics_source import NeutronicsSource
 from .group import Group
+from .precursor import Precursor
 
 valid_fv_bcs = ['reflective', 'marshak', 'vacuum',
                 'source', 'zero_flux']
@@ -16,15 +19,19 @@ valid_cfe_bcs = ['dirichlet', 'neumann', 'robin']
 valid_solve_options = ['full', 'group']
 
 def MultiGroupDiffusion(problem, discretization, bcs, ics=None, 
-                        opt='gw', tol=1e-8, maxit=500):
-  if opt == 'gw':
+                        solve_opt='gw', **kwargs):
+  if solve_opt == 'gw':
     from .mg_diffusion_gw import MultiGroupDiffusionGroupWise
     return MultiGroupDiffusionGroupWise(
-      problem, discretization, bcs, ics, tol, maxit
+      problem, discretization, bcs, ics, **kwargs
     )
-  elif opt == 'full':
+  elif solve_opt == 'full':
     from .mg_diffusion_full import MultiGroupDiffusionFull
-    return MultiGroupDiffusionFull(problem, discretization, bcs, ics)
+    return MultiGroupDiffusionFull(
+      problem, discretization, bcs, ics, **kwargs
+    )
+  else:
+    raise NotImplementedError
 
 
 class MultiGroupDiffusionBase(PhysicsBase):
@@ -34,39 +41,79 @@ class MultiGroupDiffusionBase(PhysicsBase):
   source_type = NeutronicsSource.source_type
   n_grps = 0
 
-  def __init__(self, problem, discretization, bcs, ics=None):
+  def __init__(self, problem, discretization, bcs, ics=None, **kwargs):
     super().__init__(problem)
     self.materials = self._parse_materials(self.material_type)
     self.sources = self._parse_sources(self.source_type)
-    self._validate_materials_and_sources()
     self.discretization = discretization
+    self.n_nodes = discretization.n_nodes
+    self.grid = discretization.grid
     self.bcs = self._validate_bcs(bcs)
     self.ics = self._validate_ics(ics)
-    self.n_grps = self.materials[0].n_grps
 
-    # Initialize group opjects
+    # Groups and precursors initialization
     self.groups = []
-    for g in range(self.n_grps):
-      gname = self.name + '_g{}'.format(g+1)
-      field = Field(gname, self.problem, self.discretization, 1)
-      self._register_field(field)
-      self.groups.append(Group(self, field, g))
+    self.precursors = []
+    self.n_grps = self.materials[0].n_grps
+    self.n_precursors = self._count_precursors()
+    
+    # Precursor options
+    self.use_precursors = True if self.n_precursors>0 else False
+    if 'use_precursors' in kwargs:
+      self.use_precursors = kwargs['use_precursors']
+      assert isinstance(self.use_precursors, bool), (
+        "sub_precursors option must be a boolean."
+      )
+    self.sub_precursors = True
+    if 'sub_precursors' in kwargs:
+      self.sub_precursors = kwargs['sub_precursors']
+      assert isinstance(self.sub_precursors, bool), (
+        "sub_precursors option must be a boolean."
+      )
 
-    # # Initialize precursor objects
-    # self.precursors = []
-    # for material in self.materials:
-    #   if material.n_precursors > 0:
-        
-  def compute_fission_rate(self):
-    self.fission_rate[:] = 0
+    # Initialize fields
+    self.init_fields()
+    if self.discretization.dtype == 'fv':
+      self.fission_rate = AuxField(
+        'fission_rate', problem, discretization
+      )
+
+  def compute_fission_rate(self, old=False):
+    u = self.fission_rate.u_old if old else self.fission_rate.u
+    u[:] = 0.0
     for group in self.groups:
-      group.compute_fission_rate(self.fission_rate)
+      group.compute_fission_rate(u, old)
 
   def compute_fission_power(self):
     fission_source = 0
     for group in self.groups:
       fission_source += group.compute_fission_power()
     return fission_source
+
+  def init_fields(self):
+    # Init groups
+    for g in range(self.n_grps):
+      gname = self.name + '_g{}'.format(g+1)
+      field = Field(gname, self.problem, self.discretization, 1)
+      self._register_field(field)
+      self.groups.append(Group(self, field, g))
+    
+    # Init precursors
+    if self.use_precursors:
+      for material in self.materials:
+        if material.n_precursors > 0:
+          imat = material.material_id
+          for j in range(material.n_precursors):
+            pname = "precursor_mat{}_{}".format(imat, j)
+            field = Field(pname, self.problem, self.discretization, 1)
+            self._register_field(field)
+            self.precursors.append(Precursor(self, field, imat, j))    
+
+  def _count_precursors(self):
+    n_precursors = 0
+    for material in self.materials:
+        n_precursors += material.n_precursors
+    return n_precursors
 
   def _validate_materials(self, materials):
     n_grps = materials[0].n_grps
@@ -79,6 +126,10 @@ class MultiGroupDiffusionBase(PhysicsBase):
 
   def _validate_sources(self, sources):
     n_grps = sources[0].n_grps
+    assert self.materials[0].n_grps==n_grps, (
+      "Material properties and sources must have the same "
+      "group structure."
+    )
     if len(sources) > 1:
       for source in sources[1:]:
         assert source.n_grps==n_grps, (
