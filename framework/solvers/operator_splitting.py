@@ -10,7 +10,7 @@ class OperatorSplitting(SolverBase):
     self.maxit = problem.maxit  
     # Solution vectors  
     self.u = problem.u
-    self.u_ell = np.copy(problem.u_ell)
+    self.u_ell = problem.u_ell
     
   def solve_system(self, opt=0):
     # Initialize u_ell with current solution
@@ -20,11 +20,12 @@ class OperatorSplitting(SolverBase):
     while diff > self.tol and nit < self.maxit:
       for physic in self.problem.physics:
         physic.solve_system(opt)
+      
       diff = np.linalg.norm(self.u-self.u_ell, ord=2)
       self.u_ell[:] = self.u
       nit += 1
       
-      if self.problem.verbosity > 0:
+      if self.problem.verbosity > 1:
         msg = "Nonlinear Iteration {}".format(nit)
         msg = "\n".join(['', msg, "-"*len(msg), ''])
         msg += "Absolute Diff:\t{:.3e}".format(diff)

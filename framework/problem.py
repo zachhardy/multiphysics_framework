@@ -89,7 +89,6 @@ class Problem:
         dt_ = self.dt
         self.dt = tend - self.time
       self.u_old[:] = self.u
-
     self.dt = dt_
 
   def evauluate_ics(self):

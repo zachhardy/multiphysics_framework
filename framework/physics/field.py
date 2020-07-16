@@ -1,8 +1,9 @@
+import numpy as np
+
 class Field:
 
   def __init__(self, name, problem, discretization, components=1):
     self.name = name
-    # Discretization information
     self.problem = problem
     self.mesh = problem.mesh
     self.discretization = discretization
@@ -35,3 +36,20 @@ class Field:
     start = component*self.n_nodes
     end = start + self.n_nodes
     return self.dofs[start:end]
+
+
+class AuxField:
+
+  def __init__(self, name, problem, discretization, components=1):
+    self.name = name
+    self.problem = problem
+    self.mesh = problem.mesh
+    self.discretization = discretization
+    self.grid = discretization.grid
+    self.n_nodes = discretization.n_nodes
+    # Component information
+    self.components = components
+    self.n_dofs = components * self.n_nodes
+    # Vectors
+    self.u = np.zeros(self.n_dofs)
+    self.u_old = np.zeros(self.n_dofs)
