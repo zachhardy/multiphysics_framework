@@ -8,11 +8,6 @@ class PhysicsBase:
     self.materials = []
     self.fields = []
 
-    # Discritization info
-    self.grid = []
-    self.n_nodes = 0
-    self.n_dofs = 0
-
     # Boundary and initial conditions
     self.bcs = []
     self.ics = []
@@ -33,8 +28,6 @@ class PhysicsBase:
     self.problem.n_dofs += field.n_dofs
     self.problem.u.resize(self.problem.n_dofs)
     self.problem.u_ell.resize(self.problem.n_dofs)
-    # Increment the dofs
-    self.n_dofs +=  field.n_dofs
     # Set the end of the field dof range.
     field.dof_end = self.problem.n_dofs
 

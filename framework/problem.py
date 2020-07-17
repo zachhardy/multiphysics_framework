@@ -19,6 +19,10 @@ class Problem:
   u_old = np.array([])
   # Booleans
   is_transient = False  
+  # Transient
+  time = 0.0
+  dt = 0.0
+  method = 'bwd_euler'
   
   def __init__(self, mesh, materials, sources):
     self.mesh = mesh
