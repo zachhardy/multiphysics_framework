@@ -40,6 +40,10 @@ class CellCFEView1D:
     self.shape_values = self.get_shape_values()
     self.grad_shape_values = self.get_grad_shape_values()
 
+  @property
+  def dofs(self):
+    return self.node_ids
+
   def cell_dof_map(self, local_id, component=0):
     assert local_id < self.nodes_per_cell, "Invalid local_id."
     return self.node_ids[local_id] + component*self.n_nodes

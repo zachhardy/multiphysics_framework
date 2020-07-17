@@ -13,6 +13,10 @@ class CellFVView1D:
       np.average(cell.vertices, axis=0)
     )
 
+  @property
+  def dofs(self):
+    return self.node_ids
+
   def cell_dof_map(self, component=0):
     return self.node_ids[0] + component*self.n_nodes
 
