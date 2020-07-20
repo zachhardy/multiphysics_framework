@@ -13,7 +13,7 @@ class FV(Discretization):
 
     # Generate cell views
     for cell in mesh.cells:
-      self.cell_views.append(CellFVView1D(self, cell))
+        self.cell_views.append(CellFVView1D(self, cell))
 
     # Generate the grid of unique nodes
     self.grid = self.create_grid()
@@ -21,7 +21,7 @@ class FV(Discretization):
   def create_grid(self):
     grid = []
     for view in self.cell_views:
-      grid.extend(view.nodes)
+        grid.extend(view.nodes)
     grid = np.atleast_2d(grid)
     return np.unique(grid, axis=0)
 

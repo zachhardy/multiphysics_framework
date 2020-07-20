@@ -1,4 +1,4 @@
 class MaterialBase:
 
-    def __init__(self, material_id):
-        self.material_id = material_id
+  def __init__(self, material_id):
+    self.material_id = material_id
