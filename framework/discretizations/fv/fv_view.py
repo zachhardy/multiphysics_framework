@@ -18,7 +18,7 @@ class CellFVView1D:
     return self.node_ids
 
   def cell_dof_map(self, component=0):
-    return self.node_ids[0] + component*self.n_nodes
+    return self.dofs[0] + component*self.n_nodes
 
   def average_solution(self, u):
     return float(u[self.node_ids])

@@ -46,14 +46,14 @@ class CellCFEView1D:
 
   def cell_dof_map(self, local_id, component=0):
     assert local_id < self.nodes_per_cell, "Invalid local_id."
-    return self.node_ids[local_id] + component*self.n_nodes
+    return self.dofs[local_id] + component*self.n_nodes
 
   def face_dof_map(self, face_id, component=0):
     assert face_id < 2, "Invalid face_id."
     if face_id == 0:
-      return self.node_ids[0] + component*self.n_nodes
+      return self.dofs[0] + component*self.n_nodes
     elif face_id == 1:
-      return self.node_ids[-1] + component*self.n_nodes
+      return self.dofs[-1] + component*self.n_nodes
 
   def intV_shapeI_shapeJ(self, i, j, coef=None):
     val = 0
